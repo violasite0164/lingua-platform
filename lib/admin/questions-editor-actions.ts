@@ -49,7 +49,10 @@ export async function bulkUpdateQuestionsCorrectIndex(
   let updated = 0;
   for (let i = 0; i < cleaned.length; i += CHUNK) {
     const slice = cleaned.slice(i, i + CHUNK);
-    const { error } = await supabase.from('questions').upsert(slice, { onConflict: 'id' });
+    /* postgrest-js：僅更新 correct_index / correct_answer_old 時，Insert 型別要求全欄位 */
+    const { error } = await supabase
+      .from('questions')
+      .upsert(slice as never, { onConflict: 'id' });
     if (error) {
       console.error('[bulkUpdateQuestionsCorrectIndex]', error.message);
       return { ok: false, error: error.message || '更新失敗' };
