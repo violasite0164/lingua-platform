@@ -44,7 +44,8 @@ export function HomeFeatures({
 }: {
   featuresStudentImageUrl: string | null;
 }) {
-  const hasImage = !!featuresStudentImageUrl?.trim();
+  const studentImageUrl = featuresStudentImageUrl?.trim() ?? '';
+  const hasImage = studentImageUrl.length > 0;
 
   return (
     <section
@@ -83,7 +84,7 @@ export function HomeFeatures({
 
           {hasImage && (
             <div className="shrink-0 lg:w-[min(340px,38%)]">
-              <FeaturesRightVisual imageUrl={featuresStudentImageUrl} />
+              <FeaturesRightVisual imageUrl={studentImageUrl} />
             </div>
           )}
         </div>
