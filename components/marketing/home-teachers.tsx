@@ -7,9 +7,22 @@ import { cn } from '@/lib/utils';
 /** 直向方格：寬度跟隨欄位（平板／電腦約 44% 卡寬），三張卡同一比例 */
 const TEACHER_IMAGE_FRAME_CLASS = cn(
   'relative mx-auto w-full max-w-[min(100%,18rem)] overflow-hidden rounded-2xl',
-  'aspect-[4/5] bg-[hsl(var(--marketing-surface))]',
+  'aspect-[4/5] bg-card',
   'sm:max-w-[20rem] md:mx-0 md:max-w-none',
 );
+
+type TeacherCardColor = 'primary' | 'accent';
+
+/** 第 1、3 格副色；第 2 格主色 */
+function teacherCardColor(idx: number): TeacherCardColor {
+  return idx === 1 ? 'primary' : 'accent';
+}
+
+/** 整卡底色：主色 / 副色（marketing-accent），透明度提高以便與白底區分 */
+const TEACHER_CARD_SHELL: Record<TeacherCardColor, string> = {
+  primary: 'border-primary/40 bg-primary/20',
+  accent: 'border-marketing-accent/40 bg-marketing-accent/20',
+};
 
 function TeacherCardVisual({
   imageUrl,
@@ -42,8 +55,7 @@ function TeacherCardVisual({
     <div
       className={cn(
         TEACHER_IMAGE_FRAME_CLASS,
-        'flex items-center justify-center bg-gradient-to-br from-primary to-primary/70',
-        'text-4xl font-bold text-primary-foreground shadow-lg',
+        'flex items-center justify-center bg-card text-4xl font-bold text-foreground shadow-md',
       )}
     >
       {fallbackLetter}
@@ -66,12 +78,14 @@ export function HomeTeachers({
         <ul className="mt-10 space-y-6 sm:mt-12 sm:space-y-8">
           {HOME_TEACHERS.map((t, idx) => {
             const imageOnRight = idx % 2 === 1;
+            const cardColor = teacherCardColor(idx);
 
             return (
               <li
                 key={t.name}
                 className={cn(
-                  'overflow-hidden rounded-2xl border border-border/80 bg-[hsl(var(--marketing-surface))]',
+                  'overflow-hidden rounded-2xl border',
+                  TEACHER_CARD_SHELL[cardColor],
                   'grid grid-cols-1 gap-5 p-5 sm:p-6 md:items-center md:gap-8 md:p-8',
                   imageOnRight
                     ? 'md:grid-cols-[minmax(0,1fr)_44%]'
