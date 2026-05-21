@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 /** 直向方格：寬度跟隨欄位（平板／電腦約 44% 卡寬），三張卡同一比例 */
 const TEACHER_IMAGE_FRAME_CLASS = cn(
   'relative mx-auto w-full max-w-[min(100%,18rem)] overflow-hidden rounded-2xl',
-  'aspect-[4/5] bg-card',
+  'aspect-[4/5]',
   'sm:max-w-[20rem] md:mx-0 md:max-w-none',
 );
 
@@ -45,7 +45,7 @@ function TeacherCardVisual({
           fill
           unoptimized={isSvg}
           sizes="(max-width: 767px) 320px, 44vw"
-          className="object-contain"
+          className={isSvg ? 'object-contain' : 'object-cover'}
         />
       </div>
     );
