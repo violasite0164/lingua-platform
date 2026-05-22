@@ -41,6 +41,7 @@ export function LessonWorkspace({
   timedCues,
   answeredCueIds: initialAnsweredCueIds,
 }: Props) {
+  const router = useRouter();
   const [previewTextbook, setPreviewTextbook] = useState<LessonTextbook | null>(null);
   const requiredCueIds = useMemo(
     () => getRequiredCueIds(timedCues),
