@@ -3,15 +3,48 @@
  */
 import type { MarketingThemePresetId } from '@/lib/marketing-theme';
 
+/** 首頁可上傳的背景圖數量上限 */
+export const HOMEPAGE_BACKGROUND_IMAGE_SLOTS = 5;
+
 /** 傳給 HomeCinematicBackground / HomeBackdropMediaLayers */
 export type HomeBackdropMedia = {
+  /** 本次造訪隨機選中的一張背景圖 */
   imageUrl: string | null;
+  /** 後台設定的全部背景圖（供 poster 等用途，通常不直接渲染多張） */
+  imageUrls: string[];
   videoUrl: string | null;
   imageEnabled: boolean;
   videoEnabled: boolean;
   /** 0–1，覆蓋於圖／影片上的主題色遮罩，提升前景可讀性 */
   overlayOpacity: number;
 };
+
+/** 從 DB 解析背景圖陣列；相容舊版單一 background_image_url */
+export function parseBackgroundImageUrlsFromDb(
+  urlsJson: unknown,
+  legacySingle: string | null | undefined,
+): string[] {
+  const out: string[] = [];
+  if (Array.isArray(urlsJson)) {
+    for (const item of urlsJson) {
+      if (typeof item === 'string') {
+        const t = item.trim();
+        if (t) out.push(t);
+      }
+    }
+  }
+  if (out.length > 0) {
+    return out.slice(0, HOMEPAGE_BACKGROUND_IMAGE_SLOTS);
+  }
+  const leg = legacySingle?.trim();
+  return leg ? [leg] : [];
+}
+
+/** 每次造訪首頁時隨機選一張 */
+export function pickRandomBackgroundImageUrl(urls: string[]): string | null {
+  if (urls.length === 0) return null;
+  return urls[Math.floor(Math.random() * urls.length)] ?? null;
+}
 
 /** 首頁測驗標題／標語字色（null = 沿用主题 text-foreground） */
 export type HomeQuizHeadingColors = {

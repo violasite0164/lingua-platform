@@ -41,7 +41,7 @@ const NAV_LINKS = [
   { href: '/dashboard',   label: '學習進度' },
   { href: '/courses',     label: '課程' },
   { href: '/leaderboard', label: '排行榜' },
-  { href: '/quiz',        label: 'AI英語鬥' },
+  { href: '/games',       label: '英語小遊戲' },
 ];
 
 /** 是否具備 DOM 全螢幕 API（無則隱藏按鈕，例如多數 iPhone Safari） */
@@ -173,7 +173,9 @@ export function Navbar() {
               href={link.href}
               className={cn(
                 'px-3 py-1.5 text-sm rounded-md transition-colors',
-                (pathname ?? '').startsWith(link.href)
+                (pathname ?? '').startsWith(link.href) ||
+                (link.href === '/games' &&
+                  ((pathname ?? '').startsWith('/quiz')))
                   ? 'text-foreground font-medium bg-accent'
                   : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
               )}
@@ -364,7 +366,9 @@ export function Navbar() {
               onClick={() => setMobileOpen(false)}
               className={cn(
                 'flex items-center px-3 py-2 rounded-md text-sm transition-colors',
-                (pathname ?? '').startsWith(link.href)
+                (pathname ?? '').startsWith(link.href) ||
+                (link.href === '/games' &&
+                  ((pathname ?? '').startsWith('/quiz')))
                   ? 'bg-accent text-foreground font-medium'
                   : 'text-muted-foreground hover:bg-accent/50',
               )}

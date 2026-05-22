@@ -28,8 +28,8 @@ export function MentorNavLinks() {
             className={cn(
               'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
               active
-                ? 'bg-zinc-800 text-emerald-300'
-                : 'text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100',
+                ? 'bg-accent text-emerald-700 dark:text-emerald-300'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >
             <Icon className="h-4 w-4 shrink-0 opacity-90" />

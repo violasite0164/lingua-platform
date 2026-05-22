@@ -109,7 +109,7 @@ export function HomeLoggedInDashboard({ courses }: HomeLoggedInDashboardProps) {
           <h2 id="home-quiz-arcade" className="sr-only">
             AI英語鬥
           </h2>
-          <Link href="/quiz" className="group block w-full select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Link href="/games" className="group block w-full select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <div
               className={cn(
                 pressStart2p.className,

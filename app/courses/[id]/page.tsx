@@ -19,6 +19,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatDuration, formatPrice, calcCompletionRate } from '@/lib/utils';
+import { getMentorSpecialtyLabel } from '@/lib/mentor-specialty';
 
 const LEVEL_LABELS: Record<string, string> = {
   beginner:     '初級',
@@ -271,16 +272,31 @@ export default async function CourseDetailPage({
 
           {/* ── Teacher tab ── */}
           <TabsContent value="teacher">
-            <div className="max-w-xl flex items-start gap-4">
+            <div className="max-w-2xl flex items-start gap-4">
               <Avatar className="h-16 w-16 shrink-0">
                 <AvatarImage src={teacher.avatar_url ?? undefined} />
                 <AvatarFallback>
                   {teacher.display_name.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="text-lg font-semibold">{teacher.display_name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">語言教師</p>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div>
+                  <h3 className="text-lg font-semibold">{teacher.display_name}</h3>
+                  {getMentorSpecialtyLabel(teacher.mentor_specialty) && (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {getMentorSpecialtyLabel(teacher.mentor_specialty)}
+                    </p>
+                  )}
+                </div>
+                {teacher.bio?.trim() ? (
+                  <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                    {teacher.bio.trim()}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    講師尚未填寫介紹。
+                  </p>
+                )}
               </div>
             </div>
           </TabsContent>

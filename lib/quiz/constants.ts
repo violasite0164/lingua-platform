@@ -28,6 +28,13 @@ export const HOME_QUIZ_PER_DIFFICULTY: Record<QuizDifficultyLevel, number> = {
 /** 與 `/quiz` 題幹打字機相同：每字間隔（毫秒） */
 export const QUIZ_TYPEWRITER_MS_PER_CHAR = 28;
 
-/** 答題後自動下一題／結束前延遲（與 `/quiz` 一致） */
+/** 答題後自動下一題／結束前延遲（`/quiz` AI 英語鬥） */
 export const QUIZ_ADVANCE_AFTER_ANSWER_MS = 800;
+
+/** 首頁 HomeQuiz：答題後倒數秒數（可點擊略過） */
+export const HOME_QUIZ_ADVANCE_SECONDS = 3;
+
+/** 首頁 HomeQuiz：答題後自動下一題延遲（與倒數秒數同步） */
+export const HOME_QUIZ_ADVANCE_AFTER_ANSWER_MS =
+  HOME_QUIZ_ADVANCE_SECONDS * 1000;
 

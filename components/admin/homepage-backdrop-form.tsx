@@ -18,9 +18,11 @@ import {
 } from '@/lib/marketing-theme';
 import { HOME_TEACHERS } from '@/lib/marketing-home-content';
 import {
+  HOMEPAGE_BACKGROUND_IMAGE_SLOTS,
   HOME_QUIZ_CTA_MAX_LEN,
   HOME_QUIZ_INTRO_MAX_LEN,
   normalizeHexColor,
+  parseBackgroundImageUrlsFromDb,
   TEACHERS_CARD_COUNT,
 } from '@/lib/homepage-public';
 import {
@@ -56,6 +58,18 @@ function readTeachersCardUrlsFromRow(row: HomepageConfig | null): [string, strin
   ];
 }
 
+function readBackgroundImageUrlsFromRow(row: HomepageConfig | null): string[] {
+  const parsed = parseBackgroundImageUrlsFromDb(
+    row?.background_image_urls,
+    row?.background_image_url,
+  );
+  const slots = Array.from({ length: HOMEPAGE_BACKGROUND_IMAGE_SLOTS }, () => '');
+  parsed.forEach((url, i) => {
+    if (i < HOMEPAGE_BACKGROUND_IMAGE_SLOTS) slots[i] = url;
+  });
+  return slots;
+}
+
 /** 遮罩 0–1；統一解析 DB 可能回傳的字串／逗號小數 */
 function clampOverlayOpacity(raw: unknown): number {
   const n =
@@ -76,7 +90,9 @@ export function HomepageBackdropForm({ initial }: Props) {
     updated_at: '',
   };
 
-  const [imageUrl, setImageUrl] = useState(defaults.background_image_url ?? '');
+  const [backgroundImageUrls, setBackgroundImageUrls] = useState<string[]>(() =>
+    readBackgroundImageUrlsFromRow(initial),
+  );
   const [videoUrl, setVideoUrl] = useState(defaults.background_video_url ?? '');
   const [quizResultBgUrl, setQuizResultBgUrl] = useState(
     defaults.home_quiz_result_background_image_url ?? '',
@@ -106,10 +122,23 @@ export function HomepageBackdropForm({ initial }: Props) {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
   const [uploading, setUploading] = useState<
-    'image' | 'video' | 'quizResultImage' | 'featuresStudent' | 0 | 1 | 2 | null
+    | 'video'
+    | 'quizResultImage'
+    | 'featuresStudent'
+    | 'bg0'
+    | 'bg1'
+    | 'bg2'
+    | 'bg3'
+    | 'bg4'
+    | 0
+    | 1
+    | 2
+    | null
   >(null);
 
-  const imageFileRef = useRef<HTMLInputElement>(null);
+  const backgroundImageFileRefs = Array.from({ length: HOMEPAGE_BACKGROUND_IMAGE_SLOTS }, () =>
+    useRef<HTMLInputElement>(null),
+  );
   const videoFileRef = useRef<HTMLInputElement>(null);
   const quizResultImageFileRef = useRef<HTMLInputElement>(null);
   const featuresStudentFileRef = useRef<HTMLInputElement>(null);
@@ -124,9 +153,9 @@ export function HomepageBackdropForm({ initial }: Props) {
   }, [initial?.overlay_opacity]);
 
   useEffect(() => {
-    setImageUrl(initial?.background_image_url ?? '');
+    setBackgroundImageUrls(readBackgroundImageUrlsFromRow(initial));
     setVideoUrl(initial?.background_video_url ?? '');
-  }, [initial?.background_image_url, initial?.background_video_url]);
+  }, [initial?.background_image_url, initial?.background_image_urls, initial?.background_video_url]);
 
   useEffect(() => {
     setQuizResultBgUrl(initial?.home_quiz_result_background_image_url ?? '');
@@ -163,13 +192,26 @@ export function HomepageBackdropForm({ initial }: Props) {
     setMarketingTheme(resolveMarketingThemePreset(initial?.marketing_theme_preset));
   }, [initial?.marketing_theme_preset]);
 
-  async function handleImageFile(e: ChangeEvent<HTMLInputElement>) {
+  function setBackgroundImageUrl(slotIndex: number, value: string) {
+    setBackgroundImageUrls((prev) => {
+      const next = [...prev];
+      while (next.length < HOMEPAGE_BACKGROUND_IMAGE_SLOTS) next.push('');
+      next[slotIndex] = value;
+      return next;
+    });
+  }
+
+  async function handleBackgroundImageFile(
+    slotIndex: number,
+    e: ChangeEvent<HTMLInputElement>,
+  ) {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
 
     setMessage(null);
-    setUploading('image');
+    const uploadKey = `bg${slotIndex}` as 'bg0' | 'bg1' | 'bg2' | 'bg3' | 'bg4';
+    setUploading(uploadKey);
     try {
       const supabase = createClient();
       const {
@@ -183,18 +225,23 @@ export function HomepageBackdropForm({ initial }: Props) {
       const res = await uploadHomepageMedia(supabase, file, 'image');
       if (!res.ok) setMessage({ type: 'err', text: res.error });
       else {
-        setImageUrl(res.publicUrl);
-        setMessage({ type: 'ok', text: '圖片已上傳，請按「儲存設定」套用至首頁。' });
+        setBackgroundImageUrl(slotIndex, res.publicUrl);
+        setMessage({
+          type: 'ok',
+          text: `背景圖 ${slotIndex + 1} 已上傳，請按「儲存設定」套用至首頁。`,
+        });
       }
     } finally {
       setUploading(null);
     }
   }
 
-  function removeBackgroundImage() {
-    setImageUrl('');
-    setImageEnabled(false);
-    setMessage({ type: 'ok', text: '已移除背景圖片設定（請按「儲存設定」套用）。' });
+  function removeBackgroundImage(slotIndex: number) {
+    setBackgroundImageUrl(slotIndex, '');
+    setMessage({
+      type: 'ok',
+      text: `已移除背景圖 ${slotIndex + 1}（請按「儲存設定」套用）。`,
+    });
   }
 
   async function handleVideoFile(e: ChangeEvent<HTMLInputElement>) {
@@ -339,7 +386,9 @@ export function HomepageBackdropForm({ initial }: Props) {
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData();
-    formData.set('background_image_url', imageUrl.trim());
+    for (let i = 0; i < HOMEPAGE_BACKGROUND_IMAGE_SLOTS; i++) {
+      formData.set(`background_image_url_${i}`, (backgroundImageUrls[i] ?? '').trim());
+    }
     formData.set('background_video_url', videoUrl.trim());
     formData.set('home_quiz_result_background_image_url', quizResultBgUrl.trim());
     formData.set('overlay_opacity', String(overlayOpacity));
@@ -364,64 +413,90 @@ export function HomepageBackdropForm({ initial }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <Label htmlFor="background_image_url" className="text-zinc-200">
-          背景圖片 URL
-        </Label>
-        <Input
-          id="background_image_url"
-          name="background_image_url"
-          type="url"
-          placeholder="https://…（選填，可作影片 poster）"
-          value={imageUrl}
-          onChange={(ev) => setImageUrl(ev.target.value)}
-          autoComplete="off"
-          className={inputClass}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            ref={imageFileRef}
-            type="file"
-            accept={HOMEPAGE_IMAGE_ACCEPT}
-            className="sr-only"
-            aria-hidden
-            tabIndex={-1}
-            onChange={handleImageFile}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={uploading !== null}
-            className="border-zinc-600 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
-            onClick={() => imageFileRef.current?.click()}
-          >
-            {uploading === 'image' ? (
-              <>
-                <Loader2 className="mr-2 size-4 animate-spin" />
-                上傳中…
-              </>
-            ) : (
-              <>
-                <Upload className="mr-2 size-4" />
-                上傳圖片
-              </>
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={uploading !== null || !imageUrl.trim()}
-            className="border-zinc-700 bg-zinc-950/60 text-zinc-200 hover:bg-zinc-900 disabled:opacity-50"
-            onClick={removeBackgroundImage}
-          >
-            移除
-          </Button>
-          <span className="text-xs text-zinc-500">JPEG / PNG / WebP / GIF，最大 12 MiB</span>
+      <div className="space-y-4 rounded-lg border border-zinc-700 bg-zinc-900/40 p-4">
+        <div>
+          <p className="text-sm font-medium text-zinc-200">首頁背景圖片（最多 {HOMEPAGE_BACKGROUND_IMAGE_SLOTS} 張）</p>
+          <p className="mt-1 text-xs text-zinc-500">
+            訪客每次進入首頁會隨機顯示其中一張。可上傳或貼 HTTPS 連結；若同時設定影片，隨機圖可作為載入前的封面。
+          </p>
         </div>
-        <p className="text-xs text-zinc-500">
-          可貼上 HTTPS 連結，或使用上傳（會存入 Storage 公開 bucket <code className="rounded bg-zinc-800 px-1">homepage</code>
-          ）。若同時設定影片，圖可作為載入前的封面。
-        </p>
+        {Array.from({ length: HOMEPAGE_BACKGROUND_IMAGE_SLOTS }, (_, slotIndex) => {
+          const url = backgroundImageUrls[slotIndex] ?? '';
+          const uploadKey = `bg${slotIndex}` as 'bg0' | 'bg1' | 'bg2' | 'bg3' | 'bg4';
+          const fieldId = `background_image_url_${slotIndex}`;
+          return (
+            <div
+              key={fieldId}
+              className="space-y-2 border-t border-zinc-800 pt-4 first:border-t-0 first:pt-0"
+            >
+              <Label htmlFor={fieldId} className="text-zinc-200">
+                背景圖 {slotIndex + 1}
+              </Label>
+              <Input
+                id={fieldId}
+                name={fieldId}
+                type="url"
+                placeholder="https://…（選填）"
+                value={url}
+                onChange={(ev) => setBackgroundImageUrl(slotIndex, ev.target.value)}
+                autoComplete="off"
+                className={inputClass}
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  ref={backgroundImageFileRefs[slotIndex]}
+                  type="file"
+                  accept={HOMEPAGE_IMAGE_ACCEPT}
+                  className="sr-only"
+                  aria-hidden
+                  tabIndex={-1}
+                  onChange={(ev) => handleBackgroundImageFile(slotIndex, ev)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploading !== null}
+                  className="border-zinc-600 bg-zinc-900 text-zinc-200 hover:bg-zinc-800"
+                  onClick={() => backgroundImageFileRefs[slotIndex].current?.click()}
+                >
+                  {uploading === uploadKey ? (
+                    <>
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      上傳中…
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 size-4" />
+                      上傳圖片
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploading !== null || !url.trim()}
+                  className="border-zinc-700 bg-zinc-950/60 text-zinc-200 hover:bg-zinc-900 disabled:opacity-50"
+                  onClick={() => removeBackgroundImage(slotIndex)}
+                >
+                  移除
+                </Button>
+              </div>
+              {url.trim() ? (
+                <div className="mt-2 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-950 p-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url.trim()}
+                    alt={`背景圖 ${slotIndex + 1} 預覽`}
+                    className="mx-auto max-h-36 w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-600">尚無圖片</p>
+              )}
+            </div>
+          );
+        })}
+        <p className="text-xs text-zinc-500">JPEG / PNG / WebP / GIF，單檔最大 12 MiB</p>
       </div>
 
       <div className="space-y-2">

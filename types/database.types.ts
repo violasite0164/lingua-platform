@@ -15,6 +15,14 @@ export type Json =
 // ─── Enum types ───────────────────────────────────────────
 
 export type UserRole         = 'student' | 'mentor' | 'admin';
+export type MentorSpecialty  =
+  | 'activity'
+  | 'science'
+  | 'language'
+  | 'other'
+  | 'technical';
+/** AI英語鬥小編風格 */
+export type QuizEditorPersonality = 'toxic' | 'gentle';
 export type AssignmentType   = 'text' | 'audio' | 'video' | 'image' | 'pdf';
 export type AssignmentStatus = 'submitted' | 'grading' | 'graded' | 'returned';
 export type CourseLevel      = 'beginner' | 'intermediate' | 'advanced';
@@ -57,6 +65,8 @@ export interface Database {
           display_name:      string;
           avatar_url:        string | null;
           bio:               string | null;
+          mentor_specialty:  MentorSpecialty | null;
+          quiz_editor_personality: QuizEditorPersonality | null;
           exp:               number;
           level:             number;
           streak_days:       number;
@@ -72,6 +82,8 @@ export interface Database {
           display_name?:     string;
           avatar_url?:       string | null;
           bio?:              string | null;
+          mentor_specialty?: MentorSpecialty | null;
+          quiz_editor_personality?: QuizEditorPersonality | null;
           exp?:              number;
           level?:            number;
           streak_days?:      number;
@@ -87,6 +99,8 @@ export interface Database {
           display_name?:     string;
           avatar_url?:       string | null;
           bio?:              string | null;
+          mentor_specialty?: MentorSpecialty | null;
+          quiz_editor_personality?: QuizEditorPersonality | null;
           exp?:              number;
           level?:            number;
           streak_days?:      number;
@@ -231,6 +245,144 @@ export interface Database {
             foreignKeyName: 'lessons_course_id_fkey';
             columns: ['course_id'];
             referencedRelation: 'courses';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── lesson_textbooks ──────────────────────────────
+      lesson_textbooks: {
+        Row: {
+          id:                string;
+          lesson_id:         string;
+          title:             string;
+          file_name:         string;
+          file_url:          string;
+          storage_path:      string;
+          mime_type:         string | null;
+          file_size_bytes:   number;
+          sort_order:        number;
+          page_start:        number | null;
+          page_end:          number | null;
+          source_page_count: number | null;
+          created_at:        string;
+          updated_at:        string;
+        };
+        Insert: {
+          id?:                string;
+          lesson_id:          string;
+          title:              string;
+          file_name:          string;
+          file_url:           string;
+          storage_path:       string;
+          mime_type?:         string | null;
+          file_size_bytes?:   number;
+          sort_order?:        number;
+          page_start?:        number | null;
+          page_end?:          number | null;
+          source_page_count?: number | null;
+          created_at?:        string;
+          updated_at?:        string;
+        };
+        Update: {
+          title?:             string;
+          file_name?:         string;
+          file_url?:          string;
+          storage_path?:      string;
+          mime_type?:         string | null;
+          file_size_bytes?:   number;
+          sort_order?:        number;
+          page_start?:        number | null;
+          page_end?:          number | null;
+          source_page_count?: number | null;
+          updated_at?:        string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lesson_textbooks_lesson_id_fkey';
+            columns: ['lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── lesson_timed_cues ───────────────────────────
+      lesson_timed_cues: {
+        Row: {
+          id:               string;
+          lesson_id:        string;
+          trigger_at_sec:   number;
+          cue_type:         'sentence' | 'multiple_choice' | 'text_input';
+          payload:          Json;
+          sort_order:       number;
+          is_enabled:       boolean;
+          created_at:       string;
+          updated_at:       string;
+        };
+        Insert: {
+          id?:              string;
+          lesson_id:        string;
+          trigger_at_sec:   number;
+          cue_type:         'sentence' | 'multiple_choice' | 'text_input';
+          payload:          Json;
+          sort_order?:      number;
+          is_enabled?:      boolean;
+          created_at?:      string;
+          updated_at?:      string;
+        };
+        Update: {
+          trigger_at_sec?:  number;
+          cue_type?:        'sentence' | 'multiple_choice' | 'text_input';
+          payload?:         Json;
+          sort_order?:      number;
+          is_enabled?:      boolean;
+          updated_at?:      string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lesson_timed_cues_lesson_id_fkey';
+            columns: ['lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── lesson_cue_answers ────────────────────────────
+      lesson_cue_answers: {
+        Row: {
+          user_id:     string;
+          lesson_id:   string;
+          cue_id:      string;
+          answered_at: string;
+        };
+        Insert: {
+          user_id:     string;
+          lesson_id:   string;
+          cue_id:      string;
+          answered_at?: string;
+        };
+        Update: {
+          answered_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lesson_cue_answers_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'lesson_cue_answers_lesson_id_fkey';
+            columns: ['lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'lesson_cue_answers_cue_id_fkey';
+            columns: ['cue_id'];
+            referencedRelation: 'lesson_timed_cues';
             referencedColumns: ['id'];
           }
         ];
@@ -527,6 +679,7 @@ export interface Database {
         Row: {
           id: number;
           background_image_url: string | null;
+          background_image_urls: Json;
           background_video_url: string | null;
           overlay_opacity: number;
           background_image_enabled: boolean;
@@ -546,6 +699,7 @@ export interface Database {
         Insert: {
           id?: number;
           background_image_url?: string | null;
+          background_image_urls?: Json;
           background_video_url?: string | null;
           overlay_opacity?: number;
           background_image_enabled?: boolean;
@@ -564,6 +718,7 @@ export interface Database {
         };
         Update: {
           background_image_url?: string | null;
+          background_image_urls?: Json;
           background_video_url?: string | null;
           overlay_opacity?: number;
           background_image_enabled?: boolean;
@@ -696,8 +851,10 @@ export type TablesUpdate<T extends keyof Database['public']['Tables']> =
 export type Profile       = Tables<'profiles'>;
 export type Category      = Tables<'categories'>;
 export type Course        = Tables<'courses'>;
-export type Lesson        = Tables<'lessons'>;
-export type Enrollment    = Tables<'enrollments'>;
+export type Lesson           = Tables<'lessons'>;
+export type LessonTextbook   = Tables<'lesson_textbooks'>;
+export type LessonTimedCue   = Tables<'lesson_timed_cues'>;
+export type Enrollment       = Tables<'enrollments'>;
 export type UserProgress  = Tables<'user_progress'>;
 export type Assignment    = Tables<'assignments'>;
 export type Badge         = Tables<'badges'>;
@@ -710,7 +867,10 @@ export type HomepageConfig   = Tables<'homepage_config'>;
 // ─── Enriched / joined types ──────────────────────────────
 
 export interface CourseWithTeacher extends Course {
-  teacher: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+  teacher: Pick<
+    Profile,
+    'id' | 'display_name' | 'avatar_url' | 'bio' | 'mentor_specialty'
+  >;
   category: Category | null;
 }
 

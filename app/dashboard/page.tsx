@@ -34,6 +34,7 @@ import { Separator } from '@/components/ui/separator';
 import { LevelBadge } from '@/components/gamification/level-badge';
 import { XpBar }      from '@/components/gamification/xp-bar';
 import { UserNav }    from './_components/user-nav';
+import { calcCompletionRate } from '@/lib/utils';
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
 
@@ -44,7 +45,7 @@ async function getDashboardData(userId: string) {
     { data: enrollments },
     { data: recentAssignments },
     { count: completedCount },
-    { count: totalProgressCount },
+    { data: progressRows },
   ] = await Promise.all([
     // 已報名課程（含課程基本資訊）
     supabase
@@ -81,18 +82,33 @@ async function getDashboardData(userId: string) {
       .eq('user_id', userId)
       .eq('completed', true),
 
-    // 總觀看過的課堂數
+    // 各課程已完成課堂（透過 lessons 關聯 course_id）
     supabase
       .from('user_progress')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId),
+      .select('completed, lesson:lessons!inner(course_id)')
+      .eq('user_id', userId)
+      .eq('completed', true),
   ]);
+
+  const completedByCourse: Record<string, number> = {};
+  for (const row of progressRows ?? []) {
+    const lesson = row.lesson as { course_id: string } | null;
+    if (!lesson?.course_id) continue;
+    completedByCourse[lesson.course_id] =
+      (completedByCourse[lesson.course_id] ?? 0) + 1;
+  }
+
+  const enrolledLessonTotal = (enrollments ?? []).reduce((sum, e) => {
+    const course = e.course as { lesson_count?: number } | null;
+    return sum + (course?.lesson_count ?? 0);
+  }, 0);
 
   return {
     enrollments:       enrollments ?? [],
     recentAssignments: recentAssignments ?? [],
     completedLessons:  completedCount  ?? 0,
-    totalLessons:      totalProgressCount ?? 0,
+    totalLessons:      enrolledLessonTotal,
+    completedByCourse,
   };
 }
 
@@ -180,8 +196,13 @@ export default async function DashboardPage() {
     );
   }
 
-  const { enrollments, recentAssignments, completedLessons, totalLessons } =
-    await getDashboardData(profile.id);
+  const {
+    enrollments,
+    recentAssignments,
+    completedLessons,
+    totalLessons,
+    completedByCourse,
+  } = await getDashboardData(profile.id);
 
   // XP / Level計算
   const xpPct     = Math.round(levelProgress(profile.exp, profile.level) * 100);
@@ -364,6 +385,13 @@ export default async function DashboardPage() {
                   } | null;
                   if (!course) return null;
 
+                  const courseCompleted = completedByCourse[course.id] ?? 0;
+                  const courseTotal = course.lesson_count || 0;
+                  const coursePct = calcCompletionRate(
+                    courseCompleted,
+                    courseTotal,
+                  );
+
                   return (
                     <Link key={i} href={`/courses/${course.id}`}>
                       <Card className="group cursor-pointer border-border/60 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
@@ -403,9 +431,9 @@ export default async function DashboardPage() {
                               )}
 
                               <div className="flex items-center gap-2">
-                                <Progress value={0} className="h-1.5 flex-1" />
+                                <Progress value={coursePct} className="h-1.5 flex-1" />
                                 <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                  0 / {course.lesson_count} 堂
+                                  {courseCompleted} / {courseTotal} 堂
                                 </span>
                               </div>
                             </div>

@@ -83,7 +83,6 @@ export function StreamVideoUpload({ lessonId, disabled }: Props) {
         variant="outline"
         size="sm"
         disabled={disabled || busy}
-        className="border-zinc-600 bg-zinc-900/80 text-zinc-100 hover:bg-zinc-800"
         onClick={() => inputRef.current?.click()}
       >
         {busy ? (
@@ -94,7 +93,7 @@ export function StreamVideoUpload({ lessonId, disabled }: Props) {
         {busy ? '處理中…' : '上傳影片（Cloudflare Stream）'}
       </Button>
       {error && <p className="text-xs text-red-400">{error}</p>}
-      <p className="text-[11px] text-zinc-500">
+      <p className="text-[11px] text-muted-foreground">
         上傳完成後會自動寫入 lessons.cf_video_uid，並嘗試同步長度與縮圖。
       </p>
     </div>

@@ -3,12 +3,16 @@
  * 在 Server Components / Server Actions 中使用
  */
 import { createClient } from './server';
+import type { CourseCatalogSort } from '@/lib/courses/catalog';
 import type {
   Profile,
   CourseWithTeacher,
   CourseWithLessons,
   LessonWithProgress,
+  LessonTextbook,
+  LessonTimedCue,
   AssignmentWithStudent,
+  CourseLevel,
 } from '@/types/database.types';
 
 // ─── Auth helpers ─────────────────────────────────────────
@@ -43,9 +47,26 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 
 // ─── Courses ──────────────────────────────────────────────
 
-/** 取得所有已發布課程（公開頁面用） */
+/** 公開課程分類列表 */
+export async function getPublicCategories() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name');
+
+  if (error) {
+    console.error('[getPublicCategories]', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+/** 取得所有已發布課程（公開頁面用，支援排序／級數／類型） */
 export async function getPublishedCourses(options?: {
   categorySlug?: string;
+  level?: CourseLevel;
+  sort?: CourseCatalogSort;
   limit?: number;
   offset?: number;
 }) {
@@ -58,14 +79,52 @@ export async function getPublishedCourses(options?: {
       teacher:profiles!courses_teacher_id_fkey(id, display_name, avatar_url),
       category:categories(id, name, slug)
     `)
-    .eq('is_published', true)
-    .order('created_at', { ascending: false });
+    .eq('is_published', true);
 
   if (options?.categorySlug) {
-    query = query.eq('categories.slug', options.categorySlug);
+    const { data: cat } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', options.categorySlug)
+      .maybeSingle();
+    if (!cat) return [];
+    query = query.eq('category_id', cat.id);
   }
-  if (options?.limit)  query = query.limit(options.limit);
-  if (options?.offset) query = query.range(options.offset, options.offset + (options.limit ?? 20) - 1);
+
+  if (options?.level) {
+    query = query.eq('level', options.level);
+  }
+
+  const sort = options?.sort ?? 'newest';
+  switch (sort) {
+    case 'oldest':
+      query = query.order('created_at', { ascending: true });
+      break;
+    case 'popular':
+      query = query.order('student_count', { ascending: false });
+      break;
+    case 'price_asc':
+      query = query.order('price', { ascending: true });
+      break;
+    case 'price_desc':
+      query = query.order('price', { ascending: false });
+      break;
+    case 'title':
+      query = query.order('title', { ascending: true });
+      break;
+    case 'newest':
+    default:
+      query = query.order('created_at', { ascending: false });
+      break;
+  }
+
+  if (options?.limit) query = query.limit(options.limit);
+  if (options?.offset) {
+    query = query.range(
+      options.offset,
+      options.offset + (options.limit ?? 20) - 1,
+    );
+  }
 
   const { data, error } = await query;
   if (error) {
@@ -89,7 +148,9 @@ export async function getCourseWithLessons(
     .from('courses')
     .select(`
       *,
-      teacher:profiles!courses_teacher_id_fkey(id, display_name, avatar_url),
+      teacher:profiles!courses_teacher_id_fkey(
+        id, display_name, avatar_url, bio, mentor_specialty
+      ),
       category:categories(id, name, slug)
     `)
     .eq('id', courseId)
@@ -140,6 +201,42 @@ export async function getCourseWithLessons(
     lessons: lessonsWithProgress,
     is_enrolled: isEnrolled,
   };
+}
+
+/** 單元課本教材（依 RLS：已報名或試看單元可讀） */
+export async function getLessonTextbooks(lessonId: string): Promise<LessonTextbook[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('lesson_textbooks')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[getLessonTextbooks]', error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+/** 單元定時互動（依 RLS：已報名或試看單元可讀） */
+export async function getLessonTimedCues(lessonId: string): Promise<LessonTimedCue[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('lesson_timed_cues')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .eq('is_enabled', true)
+    .order('trigger_at_sec', { ascending: true })
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[getLessonTimedCues]', error);
+    return [];
+  }
+
+  return data ?? [];
 }
 
 // ─── Assignments ──────────────────────────────────────────

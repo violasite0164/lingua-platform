@@ -42,8 +42,8 @@ export default async function MentorCoursesPage() {
     <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-50">課程管理</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-2xl font-bold text-foreground">課程管理</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             檢視、編輯課程與影片單元。
           </p>
         </div>
@@ -59,15 +59,15 @@ export default async function MentorCoursesPage() {
       </div>
 
       {courses.length === 0 ? (
-        <Card className="border-zinc-800 bg-zinc-900/70">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-zinc-200">尚無課程</CardTitle>
-            <CardDescription className="text-zinc-500">
+            <CardTitle>尚無課程</CardTitle>
+            <CardDescription>
               建立第一門課程，開始上傳影片與教材。
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline" className="border-zinc-700 text-zinc-200">
+            <Button asChild variant="outline">
               <Link href="/mentor/courses/new">建立課程</Link>
             </Button>
           </CardContent>
@@ -77,9 +77,9 @@ export default async function MentorCoursesPage() {
           {courses.map((c) => (
             <Card
               key={c.id}
-              className="overflow-hidden border-zinc-800 bg-zinc-900/80"
+              className="overflow-hidden"
             >
-              <div className="flex h-36 bg-zinc-800 relative">
+              <div className="relative flex h-36 bg-muted">
                 {c.thumbnail_url ? (
                   <Image
                     src={c.thumbnail_url}
@@ -94,7 +94,7 @@ export default async function MentorCoursesPage() {
               </div>
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="line-clamp-2 text-lg text-zinc-50">
+                  <CardTitle className="line-clamp-2 text-lg">
                     {c.title}
                   </CardTitle>
                   <Badge
@@ -102,26 +102,25 @@ export default async function MentorCoursesPage() {
                     className={
                       c.is_published
                         ? 'bg-emerald-600/90 text-white'
-                        : 'bg-zinc-700 text-zinc-300'
+                        : undefined
                     }
                   >
                     {c.is_published ? '公開' : '草稿'}
                   </Badge>
                 </div>
-                <CardDescription className="line-clamp-2 text-zinc-500">
+                <CardDescription className="line-clamp-2">
                   {c.category?.name ?? '未分類'} · {c.lesson_count} 單元 ·{' '}
                   {c.student_count} 學員
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex justify-between pt-0">
-                <span className="text-sm text-zinc-400">
+                <span className="text-sm text-muted-foreground">
                   {c.is_free ? '免費' : `HK$ ${Number(c.price).toFixed(0)}`}
                 </span>
                 <Button
                   asChild
                   size="sm"
                   variant="outline"
-                  className="border-zinc-600 text-zinc-100 hover:bg-zinc-800"
                 >
                   <Link href={`/mentor/courses/${c.id}/edit`}>
                     <Pencil className="mr-1.5 h-3.5 w-3.5" />

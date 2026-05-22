@@ -8,7 +8,10 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import type { QuizDifficultyLevel } from '@/types/database.types';
+import type {
+  QuizDifficultyLevel,
+  QuizEditorPersonality,
+} from '@/types/database.types';
 import type {
   FetchQuizQuestionsResult,
   QuizQuestionPayload,
@@ -161,14 +164,17 @@ export async function getQuizBootstrap(): Promise<QuizBootstrap> {
 
   let showQuestionBankCounts = false;
   let isAdmin = false;
+  let quizEditorPersonality: QuizEditorPersonality | null = null;
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, quiz_editor_personality')
       .eq('id', user.id)
       .maybeSingle();
     isAdmin = profile?.role === 'admin';
     showQuestionBankCounts = isAdmin;
+    const p = profile?.quiz_editor_personality;
+    if (p === 'toxic' || p === 'gentle') quizEditorPersonality = p;
   }
 
   const questionCounts: Partial<Record<QuizDifficultyLevel, number>> = {};
@@ -191,6 +197,7 @@ export async function getQuizBootstrap(): Promise<QuizBootstrap> {
       bestScores: {},
       questionCounts,
       showQuestionBankCounts: false,
+      quizEditorPersonality: null,
     };
   }
 
@@ -209,7 +216,41 @@ export async function getQuizBootstrap(): Promise<QuizBootstrap> {
     bestScores,
     questionCounts,
     showQuestionBankCounts,
+    quizEditorPersonality,
   };
+}
+
+/** 儲存 AI英語鬥小編風格偏好 */
+export async function saveQuizEditorPersonality(
+  personality: QuizEditorPersonality,
+): Promise<{ error?: string }> {
+  if (personality !== 'toxic' && personality !== 'gentle') {
+    return { error: '無效的風格' };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: '請先登入' };
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ quiz_editor_personality: personality } as never)
+    .eq('id', user.id);
+
+  if (error) {
+    const msg = error.message ?? '';
+    if (msg.includes('quiz_editor_personality') || error.code === '42703') {
+      return {
+        error:
+          '資料庫尚未更新，請執行 migration：20260525170000_profiles_quiz_editor_personality.sql',
+      };
+    }
+    return { error: error.message };
+  }
+
+  return {};
 }
 
 /**

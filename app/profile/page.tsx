@@ -11,7 +11,19 @@ import {
 
 import { createClient }                    from '@/lib/supabase/client';
 import { xpForLevel, xpToNextLevel, levelProgress } from '@/types/database.types';
-import type { Profile, UserRole }          from '@/types/database.types';
+import type {
+  Profile,
+  UserRole,
+  MentorSpecialty,
+  QuizEditorPersonality,
+} from '@/types/database.types';
+import { MENTOR_SPECIALTY_OPTIONS } from '@/lib/mentor-specialty';
+import { saveQuizEditorPersonality } from '@/lib/quiz/actions';
+import {
+  isQuizEditorPersonality,
+  writeQuizEditorPersonalityToStorage,
+} from '@/lib/quiz/editor-personality-preference';
+import { EditorPersonalityPicker } from '@/components/quiz/editor-personality-picker';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge }    from '@/components/ui/badge';
@@ -59,14 +71,27 @@ export default function ProfilePage() {
   const [saveSuccess,  setSaveSuccess]  = useState(false);
   const [signingOut,   setSigningOut]   = useState(false);
   const [completedLessons, setCompletedLessons] = useState(0);
+  const [mentorSpecialty, setMentorSpecialty] = useState<MentorSpecialty | ''>('');
+  const [bioInput, setBioInput] = useState('');
+  const [savingMentor, setSavingMentor] = useState(false);
+  const [mentorSaveError, setMentorSaveError] = useState<string | null>(null);
+  const [mentorSaveSuccess, setMentorSaveSuccess] = useState(false);
+  const [quizPersonality, setQuizPersonality] =
+    useState<QuizEditorPersonality | null>(null);
+  const [savingQuizStyle, setSavingQuizStyle] = useState(false);
+  const [quizStyleError, setQuizStyleError] = useState<string | null>(null);
+  const [quizStyleSuccess, setQuizStyleSuccess] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const fieldClass =
+    'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
   // ── Fetch profile on mount ────────────────────────────────
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) { router.push('/login'); return; }
 
       setEmail(user.email ?? '');
@@ -78,8 +103,14 @@ export default function ProfilePage() {
         .single();
 
       if (data) {
-        setProfile(data as Profile);
-        setNameInput(data.display_name);
+        const p = data as Profile;
+        setProfile(p);
+        setNameInput(p.display_name);
+        setMentorSpecialty(p.mentor_specialty ?? '');
+        setBioInput(p.bio ?? '');
+        if (isQuizEditorPersonality(p.quiz_editor_personality)) {
+          setQuizPersonality(p.quiz_editor_personality);
+        }
       }
 
       // 已完成課堂數
@@ -134,6 +165,77 @@ export default function ProfilePage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     }
+  }
+
+  const isMentorOrAdmin =
+    profile?.role === 'mentor' || profile?.role === 'admin';
+
+  async function saveQuizPersonality() {
+    if (!profile || !quizPersonality) return;
+    setSavingQuizStyle(true);
+    setQuizStyleError(null);
+    setQuizStyleSuccess(false);
+    writeQuizEditorPersonalityToStorage(quizPersonality);
+    const res = await saveQuizEditorPersonality(quizPersonality);
+    setSavingQuizStyle(false);
+    if (res.error) {
+      setQuizStyleError(res.error);
+      return;
+    }
+    setProfile((prev) =>
+      prev ? { ...prev, quiz_editor_personality: quizPersonality } : prev,
+    );
+    setQuizStyleSuccess(true);
+    setTimeout(() => setQuizStyleSuccess(false), 3000);
+  }
+
+  async function saveMentorProfile() {
+    if (!profile || !isMentorOrAdmin) return;
+
+    const trimmedBio = bioInput.trim();
+    if (trimmedBio.length > 2000) {
+      setMentorSaveError('講師介紹最多 2000 字');
+      return;
+    }
+
+    setSavingMentor(true);
+    setMentorSaveError(null);
+    setMentorSaveSuccess(false);
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        mentor_specialty: mentorSpecialty || null,
+        bio: trimmedBio || null,
+      } as never)
+      .eq('id', profile.id);
+
+    setSavingMentor(false);
+
+    if (error) {
+      const msg = error.message ?? '';
+      if (msg.includes('mentor_specialty') || error.code === '42703') {
+        setMentorSaveError(
+          '資料庫尚未更新，請在 Supabase 執行 migration：20260525150000_profiles_mentor_specialty.sql',
+        );
+      } else {
+        setMentorSaveError('儲存失敗，請稍後再試');
+      }
+      return;
+    }
+
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            mentor_specialty: mentorSpecialty || null,
+            bio: trimmedBio || null,
+          }
+        : prev,
+    );
+    setBioInput(trimmedBio);
+    setMentorSaveSuccess(true);
+    setTimeout(() => setMentorSaveSuccess(false), 3000);
   }
 
   // ── Sign out ──────────────────────────────────────────────
@@ -356,6 +458,123 @@ export default function ProfilePage() {
 
           </CardContent>
         </Card>
+
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">AI英語鬥 · 小編風格</CardTitle>
+            <p className="text-xs text-muted-foreground font-normal mt-1">
+              影響測驗中的即時評語與結算評語；可隨時切換毒舌或溫柔治癒。
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <EditorPersonalityPicker
+              value={quizPersonality}
+              onChange={(id) => {
+                setQuizPersonality(id);
+                setQuizStyleError(null);
+                setQuizStyleSuccess(false);
+              }}
+              disabled={savingQuizStyle}
+            />
+            {quizStyleError && (
+              <p className="text-xs text-destructive">{quizStyleError}</p>
+            )}
+            {quizStyleSuccess && (
+              <p className="text-xs text-green-600 dark:text-green-400">
+                ✓ 小編風格已儲存
+              </p>
+            )}
+            <Button
+              type="button"
+              onClick={() => void saveQuizPersonality()}
+              disabled={!quizPersonality || savingQuizStyle}
+              className="w-full sm:w-auto"
+            >
+              {savingQuizStyle ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  儲存中…
+                </>
+              ) : (
+                '儲存小編風格'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {isMentorOrAdmin && (
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">講師公開資料</CardTitle>
+              <p className="text-xs text-muted-foreground font-normal mt-1">
+                學員在課程頁「講師介紹」可看到以下內容
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="mentorSpecialty">導師類型</Label>
+                <select
+                  id="mentorSpecialty"
+                  value={mentorSpecialty}
+                  onChange={(e) =>
+                    setMentorSpecialty(e.target.value as MentorSpecialty | '')
+                  }
+                  disabled={savingMentor}
+                  className={fieldClass}
+                >
+                  <option value="">請選擇…</option>
+                  {MENTOR_SPECIALTY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="mentorBio">講師介紹</Label>
+                <textarea
+                  id="mentorBio"
+                  value={bioInput}
+                  onChange={(e) => setBioInput(e.target.value)}
+                  disabled={savingMentor}
+                  rows={6}
+                  maxLength={2000}
+                  placeholder="介紹你的教學背景、專長與風格…"
+                  className={`${fieldClass} min-h-[140px] resize-y`}
+                />
+                <p className="text-[11px] text-muted-foreground text-right">
+                  {bioInput.length} / 2000
+                </p>
+              </div>
+
+              {mentorSaveError && (
+                <p className="text-xs text-destructive">{mentorSaveError}</p>
+              )}
+              {mentorSaveSuccess && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  ✓ 講師資料已儲存
+                </p>
+              )}
+
+              <Button
+                type="button"
+                onClick={saveMentorProfile}
+                disabled={savingMentor}
+                className="w-full sm:w-auto"
+              >
+                {savingMentor ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    儲存中…
+                  </>
+                ) : (
+                  '儲存講師資料'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* ── Account actions ─────────────────────────────────── */}
         <Card className="border-border/60 shadow-sm">

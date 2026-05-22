@@ -42,10 +42,10 @@ export default async function MentorDashboardPage() {
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-50">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
             嗨，{profile.display_name || '導師'}
           </h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             管理課程、影片與學員作業。儀表板數據會隨課程更新。
           </p>
         </div>
@@ -59,25 +59,22 @@ export default async function MentorDashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {tiles.map((t) => (
-          <Card
-            key={t.label}
-            className="border-zinc-800 bg-zinc-900/80 text-zinc-100 shadow-lg shadow-black/20"
-          >
+          <Card key={t.label}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-zinc-400">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
                 {t.label}
               </CardTitle>
-              <t.icon className="h-4 w-4 text-emerald-400/90" />
+              <t.icon className="h-4 w-4 text-emerald-600 dark:text-emerald-400/90" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold tabular-nums text-zinc-50">
+              <div className="text-3xl font-bold tabular-nums text-foreground">
                 {t.value}
               </div>
-              <p className="mt-1 text-xs text-zinc-500">{t.hint}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t.hint}</p>
               {'href' in t && t.href ? (
                 <Link
                   href={t.href}
-                  className="mt-3 inline-block text-xs font-medium text-emerald-400 hover:underline"
+                  className="mt-3 inline-block text-xs font-medium text-emerald-600 hover:underline dark:text-emerald-400"
                 >
                   前往處理 →
                 </Link>
@@ -87,11 +84,11 @@ export default async function MentorDashboardPage() {
         ))}
       </div>
 
-      <Card className="border-zinc-800 bg-zinc-900/60">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-base text-zinc-200">快速開始</CardTitle>
+          <CardTitle className="text-base">快速開始</CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-3 text-sm text-zinc-400">
+        <CardContent className="flex flex-wrap gap-3 text-sm text-muted-foreground">
           <span>1. 建立課程並上傳封面</span>
           <span className="hidden sm:inline">·</span>
           <span>2. 新增單元並上傳 Cloudflare Stream 影片</span>

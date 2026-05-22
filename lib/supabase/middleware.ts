@@ -21,12 +21,14 @@ type CookieList = Parameters<SetAllCookies>[0];
  * 需要登入才能訪問的路由前綴
  * startsWith 匹配，/courses 會同時覆蓋 /courses/[id] 等子路由
  *
- * 注意：勿用 `/quiz` 前綴 — 會誤匹配未來路徑如 `/quizzes`。AI英語鬥僅 `/quiz` 及其子路徑。
+ * 注意：勿用 `/quiz` 前綴 — 會誤匹配未來路徑如 `/quizzes`。
+ * 英語小遊戲 `/games`、AI英語鬥 `/quiz` 及其子路徑須登入。
  * 首頁訪客的「英語測驗」在 `/`，不在此範圍。
  */
 const PROTECTED_PREFIXES = [
   '/dashboard',
   '/courses',
+  '/learn',
   '/profile',
   '/admin',
   '/mentor',
@@ -54,7 +56,13 @@ function isQuizAppRoute(pathname: string): boolean {
   return pathname === '/quiz' || pathname.startsWith('/quiz/');
 }
 
+/** 英語小遊戲專區 */
+function isGamesRoute(pathname: string): boolean {
+  return pathname === '/games' || pathname.startsWith('/games/');
+}
+
 function isProtected(pathname: string): boolean {
+  if (isGamesRoute(pathname)) return true;
   if (isQuizAppRoute(pathname)) return true;
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
@@ -117,6 +125,16 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // 已登入：更新連續學習天數（同日多次請求僅寫入一次）
+  if (user) {
+    const { error: streakErr } = await supabase.rpc('update_streak', {
+      p_user_id: user.id,
+    });
+    if (streakErr) {
+      console.error('[middleware] update_streak failed:', streakErr.message);
+    }
+  }
 
   // ── 1. 未登入 → 存取保護路由 ──────────────────────────────────
   if (!user && isProtected(pathname)) {

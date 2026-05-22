@@ -1,5 +1,7 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { createClient } from '@/lib/supabase/server';
 import type { TablesInsert } from '@/types/database.types';
 
@@ -45,20 +47,47 @@ export async function markLessonComplete({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
-  // 1. Mark progress row as completed
-  const done: TablesInsert<'user_progress'> = {
-    user_id:      user.id,
-    lesson_id:    lessonId,
-    completed:    true,
-    completed_at: new Date().toISOString(),
-  };
-  await supabase
-    .from('user_progress')
-    .upsert(done as never, { onConflict: 'user_id,lesson_id' });
+  const completedAt = new Date().toISOString();
 
-  // 2. Grant XP (DB function is idempotent via xp_granted flag)
+  const { data: existing } = await supabase
+    .from('user_progress')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('lesson_id', lessonId)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase
+      .from('user_progress')
+      .update({ completed: true, completed_at: completedAt } as never)
+      .eq('user_id', user.id)
+      .eq('lesson_id', lessonId);
+  } else {
+    const done: TablesInsert<'user_progress'> = {
+      user_id:      user.id,
+      lesson_id:    lessonId,
+      completed:    true,
+      completed_at: completedAt,
+      xp_granted:   false,
+    };
+    await supabase.from('user_progress').insert(done as never);
+  }
+
+  // Grant XP (DB function is idempotent via xp_granted flag)
   await supabase.rpc('grant_lesson_xp', {
     p_user_id:   user.id,
     p_lesson_id: lessonId,
   } as never);
+
+  const { data: lesson } = await supabase
+    .from('lessons')
+    .select('course_id')
+    .eq('id', lessonId)
+    .maybeSingle();
+
+  if (lesson?.course_id) {
+    revalidatePath(`/courses/${lesson.course_id}`);
+    revalidatePath(`/learn/${lesson.course_id}`);
+  }
+  revalidatePath('/dashboard');
 }

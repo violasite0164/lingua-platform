@@ -55,7 +55,16 @@ const nextConfig: NextConfig = {
     '@supabase/auth-js',
     'stripe',
     'wavesurfer.js',
+    'pdf-lib',
   ],
+
+  experimental: {
+    /** 課本 PDF 上傳（lib/mentor/textbook-storage MAX_LESSON_TEXTBOOK_BYTES = 50 MiB） */
+    serverActions: {
+      bodySizeLimit: '50mb',
+    },
+    middlewareClientMaxBodySize: '50mb',
+  },
 
   images: {
     remotePatterns: [

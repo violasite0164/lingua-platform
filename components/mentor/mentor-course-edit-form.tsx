@@ -7,6 +7,11 @@ import { Loader2, Plus, ExternalLink, Trash2 } from 'lucide-react';
 
 import { updateCourseFormAction, createLessonAction, deleteCourseAction, type ActionState } from '@/lib/mentor/actions';
 import type { MentorCourseRow } from '@/lib/mentor/queries';
+import {
+  mentorFileInputClass,
+  mentorSelectClass,
+  mentorTextareaClass,
+} from '@/components/mentor/field-classes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +22,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { LessonEditorCard } from '@/components/mentor/lesson-editor-card';
 import { PendingSubmitButton } from '@/components/mentor/pending-submit-button';
 import type { Tables } from '@/types/database.types';
@@ -39,24 +52,28 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
   const router = useRouter();
   const [pendingLesson, startLesson] = useTransition();
   const [pendingDelete, startDelete] = useTransition();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [lessonError, setLessonError] = useState<string | null>(null);
   const [updateState, updateAction] = useActionState(
     updateCourseFormAction,
     initialUpdateState,
   );
 
-  function handleDeleteCourse() {
-    if (!confirm(`確定要刪除「${course.title}」？\n此操作無法復原，課程下所有單元將一併刪除。`)) return;
+  function confirmDeleteCourse() {
+    setDeleteError(null);
     startDelete(async () => {
       try {
         const res = await deleteCourseAction(course.id);
         if (res.error) {
-          alert(res.error);
+          setDeleteError(res.error);
           return;
         }
-        router.push('/mentor/courses');
+        setDeleteDialogOpen(false);
+        router.push(res.redirect ?? '/mentor/courses');
+        router.refresh();
       } catch (err) {
-        alert(err instanceof Error ? err.message : '刪除失敗');
+        setDeleteError(err instanceof Error ? err.message : '刪除失敗');
       }
     });
   }
@@ -81,41 +98,76 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-50">編輯課程</h1>
-          <p className="mt-1 text-sm text-zinc-400">{course.title}</p>
+          <h1 className="text-2xl font-bold text-foreground">編輯課程</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{course.title}</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            asChild
-            variant="outline"
-            className="border-zinc-600 text-zinc-200"
-          >
+          <Button asChild variant="outline">
             <Link href="/mentor/courses">返回列表</Link>
           </Button>
           <Button
             type="button"
             variant="destructive"
             disabled={pendingDelete}
-            className="bg-red-900/70 hover:bg-red-800"
-            onClick={handleDeleteCourse}
+            onClick={() => {
+              setDeleteError(null);
+              setDeleteDialogOpen(true);
+            }}
           >
-            {pendingDelete ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="mr-1.5 h-4 w-4" />
-            )}
+            <Trash2 className="mr-1.5 h-4 w-4" />
             刪除課程
           </Button>
         </div>
       </div>
 
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>刪除課程</DialogTitle>
+            <DialogDescription>
+              確定要刪除「{course.title}」？此操作無法復原，課程下所有單元、教材與學員報名將一併刪除。
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {deleteError}
+            </p>
+          ) : null}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pendingDelete}
+              onClick={() => setDeleteDialogOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pendingDelete}
+              onClick={confirmDeleteCourse}
+            >
+              {pendingDelete ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  刪除中…
+                </>
+              ) : (
+                '確認刪除'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {updateState.error && (
-        <div className="rounded-lg border border-red-500/40 bg-red-950/40 px-3 py-2 text-sm text-red-300">
+        <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {updateState.error}
         </div>
       )}
       {updateState.success && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/30 px-3 py-2 text-sm text-emerald-300">
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
           {updateState.success}
         </div>
       )}
@@ -123,16 +175,16 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
       <form action={updateAction} className="space-y-6">
         <input type="hidden" name="id" value={course.id} />
 
-        <Card className="border-zinc-800 bg-zinc-900/80">
+        <Card>
           <CardHeader>
-            <CardTitle className="text-zinc-100">課程資訊</CardTitle>
-            <CardDescription className="text-zinc-500">
+            <CardTitle>課程資訊</CardTitle>
+            <CardDescription>
               儲存後立即生效。縮圖可重新上傳。
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="title" className="text-zinc-300">
+              <Label htmlFor="title">
                 標題 *
               </Label>
               <Input
@@ -140,12 +192,11 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
                 name="title"
                 required
                 defaultValue={course.title}
-                className="border-zinc-700 bg-zinc-950/50 text-zinc-100"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-zinc-300">
+              <Label htmlFor="description">
                 描述
               </Label>
               <textarea
@@ -153,20 +204,20 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
                 name="description"
                 rows={4}
                 defaultValue={course.description ?? ''}
-                className="flex min-h-[100px] w-full rounded-md border border-zinc-700 bg-zinc-950/50 px-3 py-2 text-sm text-zinc-100"
+                className={mentorTextareaClass}
               />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="category_id" className="text-zinc-300">
+                <Label htmlFor="category_id">
                   分類
                 </Label>
                 <select
                   id="category_id"
                   name="category_id"
                   defaultValue={course.category_id ?? ''}
-                  className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-950/50 px-3 text-sm text-zinc-100"
+                  className={mentorSelectClass}
                 >
                   <option value="">未指定</option>
                   {categories.map((c) => (
@@ -177,14 +228,14 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="level" className="text-zinc-300">
+                <Label htmlFor="level">
                   難度
                 </Label>
                 <select
                   id="level"
                   name="level"
                   defaultValue={course.level}
-                  className="flex h-9 w-full rounded-md border border-zinc-700 bg-zinc-950/50 px-3 text-sm text-zinc-100"
+                  className={mentorSelectClass}
                 >
                   {LEVELS.map((l) => (
                     <option key={l.value} value={l.value}>
@@ -196,28 +247,28 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
             </div>
 
             <div className="flex flex-wrap gap-6">
-              <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="is_free"
                   defaultChecked={course.is_free}
-                  className="h-4 w-4 rounded border-zinc-600"
+                  className="h-4 w-4 rounded border-input"
                 />
                 免費課程
               </label>
-              <label className="flex items-center gap-2 text-sm text-zinc-300">
+              <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   name="is_published"
                   defaultChecked={course.is_published}
-                  className="h-4 w-4 rounded border-zinc-600"
+                  className="h-4 w-4 rounded border-input"
                 />
                 公開上架
               </label>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="price" className="text-zinc-300">
+              <Label htmlFor="price">
                 價格（HKD）
               </Label>
               <Input
@@ -227,12 +278,11 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
                 min={0}
                 step={1}
                 defaultValue={course.price}
-                className="border-zinc-700 bg-zinc-950/50 text-zinc-100"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="thumbnail" className="text-zinc-300">
+              <Label htmlFor="thumbnail">
                 替換縮圖（選填）
               </Label>
               <Input
@@ -240,7 +290,7 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
                 name="thumbnail"
                 type="file"
                 accept="image/*"
-                className="border-zinc-700 bg-zinc-950/50 text-sm text-zinc-300 file:mr-3 file:rounded file:border-0 file:bg-zinc-800 file:px-3 file:py-1 file:text-zinc-200"
+                className={mentorFileInputClass}
               />
             </div>
 
@@ -255,12 +305,11 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
 
       <div className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-zinc-100">課程單元</h2>
+          <h2 className="text-lg font-semibold text-foreground">課程單元</h2>
           <div className="flex gap-2">
             <Button
               type="button"
               variant="outline"
-              className="border-zinc-600 text-zinc-300"
               asChild
             >
               <Link href={`/mentor/courses/${course.id}/upload-video`}>
@@ -272,7 +321,7 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
               type="button"
               onClick={addLesson}
               disabled={pendingLesson}
-              className="bg-zinc-800 text-zinc-100 hover:bg-zinc-700"
+              variant="secondary"
             >
               {pendingLesson ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -285,11 +334,11 @@ export function MentorCourseEditForm({ course, lessons, categories }: Props) {
         </div>
 
         {lessonError && (
-          <p className="text-sm text-red-400">{lessonError}</p>
+          <p className="text-sm text-destructive">{lessonError}</p>
         )}
 
         {lessons.length === 0 ? (
-          <p className="text-sm text-zinc-500">
+          <p className="text-sm text-muted-foreground">
             尚無單元，點「新增單元」開始建立，然後上傳影片。
           </p>
         ) : (

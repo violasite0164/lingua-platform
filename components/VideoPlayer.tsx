@@ -35,8 +35,18 @@ export interface VideoPlayerProps {
   completionThreshold?: number;
   /** Fires ~every 5 s with the current playback position (seconds) */
   onProgress?: (seconds: number) => void;
+  /** Fires on each timeupdate with current position (for timed cues) */
+  onPlaybackTimeUpdate?: (seconds: number) => void;
+  /** Fires when the Stream player is ready (for pause/play from parent) */
+  onPlayerReady?: (player: StreamPlayer) => void;
   /** Fires once when completionThreshold is reached */
   onComplete?: () => void;
+  /** 影片播放到結尾時觸發（不論是否達完成門檻） */
+  onEnded?: () => void;
+  /** 依觀看進度自動標記完成（有必答互動題時應設為 false） */
+  autoCompleteOnWatch?: boolean;
+  /** 伺服器已標記完成時顯示完成徽章 */
+  initialCompleted?: boolean;
   className?: string;
 }
 
@@ -134,21 +144,36 @@ export function VideoPlayer({
   locked = false,
   completionThreshold = 0.9,
   onProgress,
+  onPlaybackTimeUpdate,
+  onPlayerReady,
   onComplete,
+  onEnded,
+  autoCompleteOnWatch = true,
+  initialCompleted = false,
   className,
 }: VideoPlayerProps) {
-  const playerRef    = useRef<StreamPlayer | null>(null);
-  const completedRef = useRef(false);
+  const playerRef           = useRef<StreamPlayer | null>(null);
+  const completedRef        = useRef(initialCompleted);
+  const startTimeAppliedRef = useRef(false);
+  const initialStartTimeRef = useRef(startTime);
 
   const [status,    setStatus]    = useState<'loading' | 'ready' | 'error'>('loading');
   const [retryKey,  setRetryKey]  = useState(0);
-  const [completed, setCompleted] = useState(false);
+  const [completed, setCompleted] = useState(initialCompleted);
 
-  // Reset on video / retry change
+  // Reset on video / retry change（勿依賴 startTime，避免父層 re-render 時重設播放器）
   useEffect(() => {
-    completedRef.current = false;
-    setCompleted(false);
+    completedRef.current = initialCompleted;
+    startTimeAppliedRef.current = false;
+    initialStartTimeRef.current = startTime;
+    setCompleted(initialCompleted);
     setStatus('loading');
+  }, [videoUid, retryKey, initialCompleted]); // eslint-disable-line react-hooks/exhaustive-deps -- startTime 僅在換片時快照
+
+  useEffect(() => {
+    return () => {
+      playerRef.current?.pause();
+    };
   }, [videoUid, retryKey]);
 
   // ── Progress persistence (debounced, fires ~5 s after last timeupdate) ──────
@@ -181,10 +206,17 @@ export function VideoPlayer({
 
   const handleCanPlay = useCallback(() => {
     setStatus('ready');
-    if (startTime > 0 && playerRef.current) {
-      playerRef.current.currentTime = startTime;
+    if (playerRef.current) {
+      onPlayerReady?.(playerRef.current);
     }
-  }, [startTime]);
+    // canplay 在緩衝恢復時也會觸發；僅在初次載入時 seek 一次，避免播放中反覆跳回續播點
+    if (startTimeAppliedRef.current || !playerRef.current) return;
+    const resumeAt = initialStartTimeRef.current;
+    if (resumeAt > 0) {
+      playerRef.current.currentTime = resumeAt;
+    }
+    startTimeAppliedRef.current = true;
+  }, [onPlayerReady]);
 
   const handleTimeUpdate = useCallback(() => {
     const player = playerRef.current;
@@ -193,16 +225,32 @@ export function VideoPlayer({
     const current = player.currentTime;
     const total   = player.duration;
 
+    onPlaybackTimeUpdate?.(Math.floor(current));
     debouncedPersist(Math.floor(current));
 
-    if (!completedRef.current && total > 0 && current / total >= completionThreshold) {
+    if (
+      autoCompleteOnWatch &&
+      !completedRef.current &&
+      total > 0 &&
+      current / total >= completionThreshold
+    ) {
       handleCompletion();
     }
-  }, [debouncedPersist, completionThreshold, handleCompletion]);
+  }, [
+    autoCompleteOnWatch,
+    debouncedPersist,
+    completionThreshold,
+    handleCompletion,
+    onPlaybackTimeUpdate,
+  ]);
 
   const handleEnded = useCallback(() => {
-    handleCompletion();
-  }, [handleCompletion]);
+    playerRef.current?.pause();
+    onEnded?.();
+    if (autoCompleteOnWatch) {
+      handleCompletion();
+    }
+  }, [autoCompleteOnWatch, handleCompletion, onEnded]);
 
   const handleError = useCallback(() => {
     setStatus('error');
@@ -214,7 +262,7 @@ export function VideoPlayer({
     return (
       <div
         className={cn(
-          'aspect-video flex items-center justify-center rounded-xl bg-muted',
+          'flex aspect-video w-full max-w-full items-center justify-center rounded-xl bg-muted',
           className,
         )}
       >
@@ -228,18 +276,19 @@ export function VideoPlayer({
   return (
     <div
       className={cn(
-        'group relative aspect-video overflow-hidden rounded-xl bg-zinc-950',
+        'group relative aspect-video w-full max-w-full min-w-0 overflow-hidden rounded-xl bg-zinc-950',
         'shadow-2xl ring-1 ring-black/20 dark:ring-white/5',
         className,
       )}
     >
-      {/* Cloudflare Stream player (iframe + HLS, quality switching built-in) */}
       <Stream
         key={retryKey}
         src={videoUid}
         controls
+        loop={false}
         preload="auto"
-        className="h-full w-full"
+        responsive
+        className="w-full"
         /* @ts-expect-error – ref type not perfectly exported by the package */
         streamRef={playerRef}
         onCanPlay={handleCanPlay}

@@ -175,6 +175,44 @@ body {
   -webkit-font-smoothing: none;
 }
 
+/* /quiz：長按／觸控時停用系統藍色 tap highlight 與文字選取 */
+.quiz-disable-highlight,
+.quiz-disable-highlight *:not(input):not(textarea) {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.quiz-disable-highlight *::selection,
+.quiz-disable-highlight *::-moz-selection {
+  background: transparent !important;
+  color: inherit;
+}
+
+.quiz-disable-highlight button:focus {
+  outline: none;
+}
+
+.quiz-disable-highlight button:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* 答題中（已選答案）：整張題卡禁止拖選，避免長按解析時選到題幹／計時 */
+.quiz-play-answered,
+.quiz-play-answered *:not(input):not(textarea) {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.quiz-play-answered *::selection,
+.quiz-play-answered *::-moz-selection {
+  background: transparent !important;
+  color: inherit;
+}
+
 /* /quiz：在需要時強制使用 Press Start 2P（由 next/font 注入 CSS variable） */
 .quiz-font-press-start {
   font-family: var(--font-press-start-2p), ui-sans-serif, system-ui, sans-serif;
@@ -193,6 +231,21 @@ body {
 .quiz-font-result-mixed {
   font-family: var(--font-press-start-2p), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* HomeQuiz：答題後自動下一題倒數條 */
+@keyframes home-quiz-advance {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.home-quiz-advance-bar {
+  transform: scaleX(0);
+  animation: home-quiz-advance var(--home-quiz-advance-ms, 2.5s) linear forwards;
 }
 
 /* 8-bit 街機「GAME START」閃爍（keyframe 窄區間，視覺接近硬切） */
@@ -234,7 +287,25 @@ body {
   }
 }
 
+/* 英語小遊戲 — 遊戲區（明確寬高，避免塌縮成一條線） */
+.games-viewport {
+  height: min(85dvh, 820px);
+  width: min(100%, calc(min(85dvh, 820px) * 9 / 19.5));
+}
+
+@media (min-width: 768px) {
+  .games-viewport {
+    height: min(calc(100dvh - 14rem), 720px);
+    width: min(100%, calc(min(calc(100dvh - 14rem), 720px) * 4 / 3));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .home-quiz-advance-bar {
+    animation: none;
+    transform: scaleX(1);
+  }
+
   .quiz-game-start-label {
     animation: none;
     opacity: 1;

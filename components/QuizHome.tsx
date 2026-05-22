@@ -7,17 +7,28 @@
  */
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { Press_Start_2P } from 'next/font/google';
 import { useTheme } from 'next-themes';
-import { CheckCircle2, Loader2, Sparkles, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, Sparkles, XCircle } from 'lucide-react';
 
 import { RegisterFormCard } from '@/components/auth/register-form-card';
 import { useHomeBackdropPlayback } from '@/components/home-backdrop-playback';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { fetchHomeQuizQuestions } from '@/lib/quiz/home-quiz-actions';
-import { QUIZ_ADVANCE_AFTER_ANSWER_MS, QUIZ_TYPEWRITER_MS_PER_CHAR } from '@/lib/quiz/constants';
+import {
+  HOME_QUIZ_ADVANCE_AFTER_ANSWER_MS,
+  HOME_QUIZ_ADVANCE_SECONDS,
+  QUIZ_TYPEWRITER_MS_PER_CHAR,
+} from '@/lib/quiz/constants';
 import { stripChoiceLetterPrefix, stripQuestionNumberPrefix } from '@/lib/quiz/question-utils';
 import {
   ensureHomeQuizAudio,
@@ -199,12 +210,24 @@ export function QuizHome({
   const [correctCount, setCorrectCount] = useState(0);
   const [animatedCorrectCount, setAnimatedCorrectCount] = useState(0);
   const [pickedIndex, setPickedIndex] = useState<number | null>(null);
+  /** 答題後倒數（秒）；null = 未在倒數 */
+  const [advanceSecondsLeft, setAdvanceSecondsLeft] = useState<number | null>(
+    null,
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   /** RPG：題幹已打出來的字元（與 /quiz 一致） */
   const [typedQuestion, setTypedQuestion] = useState('');
   /** 與最後一字同步解鎖，避免「已顯示完」但 state 落後一幀導致誤判或閉包讀舊題 */
   const [optionsAnswerable, setOptionsAnswerable] = useState(false);
   const typeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const advanceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+  const pendingAdvanceRef = useRef<{
+    snapCursor: number;
+    snapTotal: number;
+    ok: boolean;
+  } | null>(null);
   /** 本輪答對數（本題尚未入 state 前用 ref + 本題是否對來算結算） */
   const correctCountRef = useRef(0);
   const playPickContextRef = useRef<{
@@ -379,6 +402,75 @@ export function QuizHome({
     setBackdropMediaHidden(phase !== 'intro');
   }, [phase, setBackdropMediaHidden]);
 
+  const advanceAfterAnswer = useCallback(
+    (snapCursor: number, snapTotal: number, ok: boolean) => {
+      if (snapCursor >= snapTotal - 1) {
+        const finalCorrect = correctCountRef.current + (ok ? 1 : 0);
+        if (useProAudio) {
+          playHomeQuizResult(finalCorrect, snapTotal);
+        } else {
+          playQuizResultHome(finalCorrect, snapTotal);
+        }
+        setPhase('result');
+      } else {
+        setCursor(snapCursor + 1);
+        setPickedIndex(null);
+      }
+    },
+    [useProAudio],
+  );
+
+  const clearAdvanceCountdown = useCallback(() => {
+    if (advanceIntervalRef.current) {
+      clearInterval(advanceIntervalRef.current);
+      advanceIntervalRef.current = null;
+    }
+    setAdvanceSecondsLeft(null);
+  }, []);
+
+  const skipAdvanceWait = useCallback(() => {
+    if (pickedIndex === null || !pendingAdvanceRef.current) return;
+    clearAdvanceCountdown();
+    const pending = pendingAdvanceRef.current;
+    pendingAdvanceRef.current = null;
+    advanceAfterAnswer(pending.snapCursor, pending.snapTotal, pending.ok);
+  }, [pickedIndex, advanceAfterAnswer, clearAdvanceCountdown]);
+
+  const startAdvanceCountdown = useCallback(
+    (snapCursor: number, snapTotal: number, ok: boolean) => {
+      clearAdvanceCountdown();
+      pendingAdvanceRef.current = { snapCursor, snapTotal, ok };
+      setAdvanceSecondsLeft(HOME_QUIZ_ADVANCE_SECONDS);
+
+      let remaining = HOME_QUIZ_ADVANCE_SECONDS;
+      advanceIntervalRef.current = setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          if (advanceIntervalRef.current) {
+            clearInterval(advanceIntervalRef.current);
+            advanceIntervalRef.current = null;
+          }
+          setAdvanceSecondsLeft(null);
+          const pending = pendingAdvanceRef.current;
+          if (!pending) return;
+          pendingAdvanceRef.current = null;
+          advanceAfterAnswer(pending.snapCursor, pending.snapTotal, pending.ok);
+          return;
+        }
+        setAdvanceSecondsLeft(remaining);
+      }, 1000);
+    },
+    [advanceAfterAnswer, clearAdvanceCountdown],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (advanceIntervalRef.current) {
+        clearInterval(advanceIntervalRef.current);
+      }
+    };
+  }, []);
+
   const startGame = useCallback(async () => {
     if (useProAudio) {
       const ctx = await resumeHomeQuizAudio();
@@ -398,8 +490,10 @@ export function QuizHome({
     setCursor(0);
     setCorrectCount(0);
     setPickedIndex(null);
+    clearAdvanceCountdown();
+    pendingAdvanceRef.current = null;
     setPhase('play');
-  }, [useProAudio]);
+  }, [useProAudio, clearAdvanceCountdown]);
 
   const handlePick = useCallback(async (idx: number) => {
     if (useProAudio) {
@@ -428,21 +522,8 @@ export function QuizHome({
       setCorrectCount((c) => c + 1);
     }
 
-    window.setTimeout(() => {
-      if (snapCursor >= snapTotal - 1) {
-        const finalCorrect = correctCountRef.current + (ok ? 1 : 0);
-        if (useProAudio) {
-          playHomeQuizResult(finalCorrect, snapTotal);
-        } else {
-          playQuizResultHome(finalCorrect, snapTotal);
-        }
-        setPhase('result');
-      } else {
-        setCursor(snapCursor + 1);
-        setPickedIndex(null);
-      }
-    }, QUIZ_ADVANCE_AFTER_ANSWER_MS);
-  }, [useProAudio]);
+    startAdvanceCountdown(snapCursor, snapTotal, ok);
+  }, [useProAudio, startAdvanceCountdown]);
 
   const ratingText = useMemo(() => {
     const pool = HOME_QUIZ_RATING[correctCount] ?? HOME_QUIZ_RATING[0];
@@ -579,7 +660,7 @@ export function QuizHome({
                   </p>
                 </div>
 
-                <div className="relative isolate">
+                <div className="relative isolate min-h-[14rem] sm:min-h-[16rem]">
                   <div
                     className="grid gap-3"
                     inert={pickedIndex !== null}
@@ -590,7 +671,8 @@ export function QuizHome({
                       const raw = el?.dataset?.optionIndex;
                       const idx = raw === undefined ? NaN : Number.parseInt(raw, 10);
                       if (!Number.isInteger(idx) || idx < 0 || idx > 3) return;
-                      handlePick(idx);
+                      e.stopPropagation();
+                      void handlePick(idx);
                     }}
                   >
                     {current.options.map((opt, i) => {
@@ -637,6 +719,98 @@ export function QuizHome({
                       role="presentation"
                     />
                   )}
+
+                  {pickedIndex !== null && (
+                    <div
+                      className="absolute inset-0 z-20 flex cursor-pointer items-center justify-center rounded-xl p-3 sm:p-4"
+                      role="button"
+                      tabIndex={0}
+                      aria-label={
+                        cursor + 1 < totalQ
+                          ? '點擊任意處進入下一題'
+                          : '點擊任意處查看快測結果'
+                      }
+                      onClick={() => skipAdvanceWait()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          skipAdvanceWait();
+                        }
+                      }}
+                    >
+                      <div
+                        className={cn(
+                          'pointer-events-none absolute inset-0 rounded-xl',
+                          isLanding ? 'bg-background/70' : 'bg-black/70',
+                        )}
+                        aria-hidden
+                      />
+                      <div
+                        className={cn(
+                          'pointer-events-none relative z-10 flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border px-5 py-6 shadow-2xl',
+                          isLanding
+                            ? 'border-primary/35 bg-card/88'
+                            : 'border-white/30 bg-background/90',
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            'flex items-center gap-2 text-base font-semibold',
+                            pickedIndex === Number(current.correct_index)
+                              ? 'text-emerald-700 dark:text-emerald-300'
+                              : 'text-destructive',
+                          )}
+                        >
+                          {pickedIndex === Number(current.correct_index) ? (
+                            <>
+                              <CheckCircle2 className="size-6 shrink-0" />
+                              答對了！
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="size-6 shrink-0" />
+                              答錯了
+                            </>
+                          )}
+                        </div>
+
+                        <p className="text-center text-lg font-bold text-foreground sm:text-xl">
+                          {cursor + 1 < totalQ
+                            ? '點擊任意處進入下一題'
+                            : '點擊任意處查看結果'}
+                        </p>
+
+                        <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                          <span>
+                            {cursor + 1 < totalQ ? '下一題' : '查看結果'}
+                          </span>
+                          <ArrowRight className="size-5 animate-pulse" aria-hidden />
+                        </div>
+
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                          <div
+                            key={`advance-${cursor}-${pickedIndex}`}
+                            className="home-quiz-advance-bar h-full w-full origin-left rounded-full bg-primary"
+                            style={
+                              {
+                                '--home-quiz-advance-ms': `${HOME_QUIZ_ADVANCE_AFTER_ANSWER_MS}ms`,
+                              } as CSSProperties
+                            }
+                          />
+                        </div>
+
+                        {advanceSecondsLeft !== null && (
+                          <p
+                            className="text-center text-sm font-medium tabular-nums text-muted-foreground"
+                            aria-live="polite"
+                          >
+                            {advanceSecondsLeft} 秒後
+                            {cursor + 1 < totalQ ? '自動進入下一題' : '自動查看結果'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {pickedIndex !== null && (
@@ -648,43 +822,30 @@ export function QuizHome({
                         : 'border-destructive/40 bg-destructive/10',
                     )}
                   >
-                    <div className="mb-2 flex items-center gap-2 font-medium">
-                      {pickedIndex === Number(current.correct_index) ? (
-                        <>
-                          <CheckCircle2 className="size-5 text-emerald-600 dark:text-emerald-400" />
-                          答對
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="size-5 text-destructive" />
-                          答錯
-                        </>
+                      {aiTauntLine && (
+                        <p
+                          className={cn(
+                            'mb-2 text-sm font-medium',
+                            pickedIndex === Number(current.correct_index)
+                              ? 'text-emerald-800 dark:text-emerald-200'
+                              : 'text-destructive',
+                          )}
+                        >
+                          學習提示：{aiTauntLine}
+                        </p>
                       )}
+                      {pickedIndex !== Number(current.correct_index) && (
+                        <p className="mb-2 text-sm font-medium text-foreground">
+                          正確答案：{String.fromCharCode(65 + Number(current.correct_index))}.{' '}
+                          {stripChoiceLetterPrefix(
+                            current.options[Number(current.correct_index)] ?? '',
+                          )}
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {current.explanation}
+                      </p>
                     </div>
-                    {aiTauntLine && (
-                      <p
-                        className={cn(
-                          'mb-2 text-sm font-medium',
-                          pickedIndex === Number(current.correct_index)
-                            ? 'text-emerald-800 dark:text-emerald-200'
-                            : 'text-destructive',
-                        )}
-                      >
-                        學習提示：{aiTauntLine}
-                      </p>
-                    )}
-                    {pickedIndex !== Number(current.correct_index) && (
-                      <p className="mb-2 text-sm font-medium text-foreground">
-                        正確答案：{String.fromCharCode(65 + Number(current.correct_index))}.{' '}
-                        {stripChoiceLetterPrefix(
-                          current.options[Number(current.correct_index)] ?? '',
-                        )}
-                      </p>
-                    )}
-                    <p className="text-muted-foreground text-sm leading-relaxed">
-                      {current.explanation}
-                    </p>
-                  </div>
                 )}
               </div>
             </>

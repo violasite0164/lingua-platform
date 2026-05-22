@@ -92,7 +92,7 @@ function LessonItem({
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground shrink-0">{index + 1}.</span>
           <span className="truncate">{lesson.title}</span>
-          {lesson.is_preview && !canAccess && (
+          {lesson.is_preview && (
             <span className="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 font-medium">
               試看
             </span>

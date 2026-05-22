@@ -18,29 +18,29 @@ export default async function MentorLayout({
   await requireMentor();
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] w-full bg-zinc-950 text-zinc-100">
+    <div className="flex min-h-[calc(100vh-8rem)] w-full bg-background text-foreground">
       {/* Desktop sidebar */}
-      <aside className="relative hidden w-56 shrink-0 flex-col border-r border-zinc-800 bg-zinc-950 lg:flex">
-        <div className="flex h-14 items-center gap-2 border-b border-zinc-800 px-4">
-          <GraduationCap className="h-5 w-5 text-emerald-400" />
+      <aside className="relative hidden w-56 shrink-0 flex-col border-r border-border bg-card lg:flex">
+        <div className="flex h-14 items-center gap-2 border-b border-border px-4">
+          <GraduationCap className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           <span className="font-semibold tracking-tight">導師後台</span>
         </div>
         <nav className="flex flex-col gap-0.5 p-3">
           <MentorNavLinks />
         </nav>
-        <div className="mt-auto border-t border-zinc-800 p-4 text-[11px] text-zinc-500">
+        <div className="mt-auto border-t border-border p-4 text-[11px] text-muted-foreground">
           LinguaLearn Mentor
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col bg-zinc-900/40">
+      <div className="flex min-w-0 flex-1 flex-col bg-muted/30">
         {/* Mobile nav */}
-        <div className="flex gap-1 overflow-x-auto border-b border-zinc-800 bg-zinc-950 px-2 py-2 lg:hidden">
+        <div className="flex gap-1 overflow-x-auto border-b border-border bg-card px-2 py-2 lg:hidden">
           {MOBILE_NAV.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className="flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+              className="flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
             >
               {label}
             </Link>
