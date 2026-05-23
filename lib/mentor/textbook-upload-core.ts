@@ -19,6 +19,21 @@ export type TextbookUploadResult = {
   success?: string;
 };
 
+export type RegisterLessonTextbookInput = {
+  lessonId: string;
+  title: string;
+  path: string;
+  publicUrl: string;
+  fileName: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  pageStart: number | null;
+  pageEnd: number | null;
+  sourcePageCount: number | null;
+};
+
+type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
+
 function safeRevalidate(path: string) {
   if (process.env.NODE_ENV === 'development') return;
   revalidatePath(path);
@@ -62,6 +77,54 @@ export async function getLessonCourseId(lessonId: string): Promise<string> {
 
   if (error || !data) throw new Error('找不到單元');
   return data.course_id;
+}
+
+/** 瀏覽器直傳 Storage 後，寫入 lesson_textbooks 資料列 */
+export async function registerLessonTextbook(
+  supabase: SupabaseServerClient,
+  courseId: string,
+  input: RegisterLessonTextbookInput,
+): Promise<TextbookUploadResult> {
+  const { lessonId } = input;
+  const title =
+    input.title.trim() || input.fileName.replace(/\.[^.]+$/, '') || input.fileName;
+
+  const { data: maxRow } = await supabase
+    .from('lesson_textbooks')
+    .select('sort_order')
+    .eq('lesson_id', lessonId)
+    .order('sort_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextOrder = (maxRow?.sort_order ?? -1) + 1;
+
+  const insert: TablesInsert<'lesson_textbooks'> = {
+    lesson_id: lessonId,
+    title,
+    file_name: input.fileName,
+    file_url: input.publicUrl,
+    storage_path: input.path,
+    mime_type: input.mimeType,
+    file_size_bytes: input.fileSizeBytes,
+    sort_order: nextOrder,
+    page_start: input.pageStart,
+    page_end: input.pageEnd,
+    source_page_count: input.sourcePageCount,
+  };
+
+  const { error: insErr } = await supabase.from('lesson_textbooks').insert(insert);
+  if (insErr) {
+    await removeLessonTextbookFile(supabase, input.path);
+    return { error: insErr.message };
+  }
+
+  safeRevalidate(`/mentor/courses/${courseId}/edit`);
+  const pageHint =
+    input.pageStart != null && input.pageEnd != null
+      ? `（第 ${input.pageStart}–${input.pageEnd} 頁）`
+      : '';
+  return { success: `已上傳課本${pageHint}` };
 }
 
 /** 課本上傳核心邏輯（API Route 與 Server Action 共用） */
