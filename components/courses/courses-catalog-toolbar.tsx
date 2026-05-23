@@ -63,8 +63,8 @@ export function CoursesCatalogToolbar({
         <span className="text-xs">· 共 {resultCount} 門課程</span>
       </div>
 
-      <div className="flex flex-wrap items-end gap-4 gap-y-3">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="flex flex-col gap-4 md:flex-row md:flex-wrap md:items-end md:gap-x-4 md:gap-y-3">
+        <div className="flex w-full min-w-0 flex-col gap-2 md:flex-1">
           <span className="text-xs font-medium text-muted-foreground">級數</span>
           <div
             className="flex flex-wrap gap-2"
@@ -102,46 +102,48 @@ export function CoursesCatalogToolbar({
           </div>
         </div>
 
-        <label className="flex shrink-0 flex-col gap-1.5 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1 font-medium">
-            <ArrowUpDown className="h-3.5 w-3.5" />
-            排序
-          </span>
-          <select
-            className={COURSE_CATALOG_SELECT_CLASS}
-            value={filters.sort}
-            onChange={(e) =>
-              pushFilters({ sort: e.target.value as CourseCatalogSort })
-            }
-            aria-label="課程排序"
-          >
-            {COURSE_CATALOG_SORTS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid w-full grid-cols-2 gap-3 md:w-auto md:shrink-0">
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 font-medium">
+              <ArrowUpDown className="h-3.5 w-3.5 shrink-0" />
+              排序
+            </span>
+            <select
+              className={cn(COURSE_CATALOG_SELECT_CLASS, 'w-full min-w-0')}
+              value={filters.sort}
+              onChange={(e) =>
+                pushFilters({ sort: e.target.value as CourseCatalogSort })
+              }
+              aria-label="課程排序"
+            >
+              {COURSE_CATALOG_SORTS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="flex shrink-0 flex-col gap-1.5 text-xs text-muted-foreground">
-          <span className="font-medium">類型</span>
-          <select
-            className={COURSE_CATALOG_SELECT_CLASS}
-            value={filters.categorySlug ?? ''}
-            onChange={(e) => {
-              const v = e.target.value;
-              pushFilters({ categorySlug: v || undefined });
-            }}
-            aria-label="課程類型"
-          >
-            <option value="">全部類型</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="flex min-w-0 flex-col gap-1.5 text-xs text-muted-foreground">
+            <span className="font-medium">類型</span>
+            <select
+              className={cn(COURSE_CATALOG_SELECT_CLASS, 'w-full min-w-0')}
+              value={filters.categorySlug ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                pushFilters({ categorySlug: v || undefined });
+              }}
+              aria-label="課程類型"
+            >
+              <option value="">全部類型</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.slug}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   );
