@@ -57,7 +57,7 @@ export async function prepareLessonTextbookUpload(
     const cropped = await extractPdfPageRange(bytes, parsed.pageStart, parsed.pageEnd);
     if (!cropped.ok) return { ok: false, error: cropped.error };
 
-    blob = new Blob([cropped.bytes], { type: 'application/pdf' });
+    blob = new Blob([cropped.bytes.slice()], { type: 'application/pdf' });
     fileName = buildCroppedPdfFileName(file.name, parsed.pageStart, parsed.pageEnd);
     mimeType = 'application/pdf';
     sizeBytes = blob.size;
