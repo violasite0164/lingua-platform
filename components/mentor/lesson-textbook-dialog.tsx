@@ -16,6 +16,10 @@ import {
   listLessonTextbooksAction,
   reorderLessonTextbooksAction,
 } from '@/lib/mentor/textbook-actions';
+import {
+  uploadLessonTextbookViaBrowser,
+  validateTextbookFileBeforeUpload,
+} from '@/lib/mentor/textbook-upload-browser';
 import { LESSON_TEXTBOOK_ACCEPT } from '@/lib/mentor/textbook-storage';
 import { mentorFileInputClass } from '@/components/mentor/field-classes';
 import { Button } from '@/components/ui/button';
@@ -55,10 +59,11 @@ function formatPageRange(tb: Textbook): string | null {
 
 type Props = {
   lessonId: string;
+  courseId: string;
   disabled?: boolean;
 };
 
-export function LessonTextbookDialog({ lessonId, disabled }: Props) {
+export function LessonTextbookDialog({ lessonId, courseId, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const [textbooks, setTextbooks] = useState<Textbook[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -126,29 +131,68 @@ export function LessonTextbookDialog({ lessonId, disabled }: Props) {
       }
     }
 
-    const formData = new FormData();
-    formData.set('lesson_id', lessonId);
-    formData.set('file', file);
-    if (title.trim()) formData.set('title', title.trim());
-    if (selectedPdf && cropPdf) {
-      formData.set('crop_pdf', '1');
-      formData.set('page_start', pageStart.trim());
-      formData.set('page_end', pageEnd.trim());
+    const precheck = validateTextbookFileBeforeUpload(file);
+    if (precheck) {
+      setMsg(precheck);
+      return;
+    }
+
+    const displayTitle = title.trim() || file.name.replace(/\.[^.]+$/, '') || file.name;
+    const cropOptions =
+      selectedPdf && cropPdf
+        ? { cropPdf: true, pageStartRaw: pageStart.trim(), pageEndRaw: pageEnd.trim() }
+        : {};
+
+    const largeFile = file.size > 8 * 1024 * 1024;
+    if (largeFile) {
+      setMsg('大檔上傳中，請保持此頁開啟並稍候（直傳儲存空間，約需數十秒）…');
     }
 
     startTransition(async () => {
       let res: { success?: string; error?: string };
       try {
-        const uploadRes = await fetch('/api/mentor/lesson-textbooks/upload', {
-          method: 'POST',
-          body: formData,
-        });
-        res = (await uploadRes.json()) as { success?: string; error?: string };
-        if (!uploadRes.ok && !res.error) {
-          res = { error: '上傳失敗' };
+        const browserUpload = await uploadLessonTextbookViaBrowser(
+          courseId,
+          lessonId,
+          file,
+          displayTitle,
+          cropOptions,
+        );
+        if (browserUpload.error || !browserUpload.registerBody) {
+          res = { error: browserUpload.error ?? '上傳失敗' };
+        } else {
+          const registerRes = await fetch('/api/mentor/lesson-textbooks/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(browserUpload.registerBody),
+          });
+          const registerText = await registerRes.text();
+          try {
+            res = JSON.parse(registerText) as { success?: string; error?: string };
+          } catch {
+            res = {
+              error: registerRes.ok
+                ? '登記教材失敗（伺服器回傳異常）'
+                : `登記教材失敗 (${registerRes.status})`,
+            };
+          }
+          if (!registerRes.ok && !res.error) {
+            res = {
+              error:
+                registerRes.status === 413
+                  ? '檔案過大，請勿超過 50 MiB'
+                  : `登記教材失敗 (${registerRes.status})`,
+            };
+          }
         }
-      } catch {
-        res = { error: '網路錯誤，請重試' };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        res = {
+          error: message.includes('Failed to fetch')
+            ? '連線中斷或逾時（大檔上傳請保持網路穩定並稍候）'
+            : message || '上傳失敗，請重試',
+        };
       }
       setMsg(res.success ?? res.error ?? null);
       if (res.success) {

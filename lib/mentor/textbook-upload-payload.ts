@@ -4,10 +4,8 @@ import {
   isPdfFile,
   parsePdfPageRange,
 } from '@/lib/mentor/pdf-crop';
-import {
-  isAllowedTextbookMime,
-  MAX_LESSON_TEXTBOOK_BYTES,
-} from '@/lib/mentor/textbook-storage';
+import { resolveTextbookMime, validateTextbookMime } from '@/lib/mentor/textbook-mime';
+import { MAX_LESSON_TEXTBOOK_BYTES } from '@/lib/mentor/textbook-storage';
 
 export type PreparedTextbookUpload = {
   blob: Blob;
@@ -33,14 +31,13 @@ export async function prepareLessonTextbookUpload(
     return { ok: false, error: '請選擇檔案' };
   }
 
-  const mime = file.type || 'application/octet-stream';
-  if (!isAllowedTextbookMime(mime)) {
-    return { ok: false, error: '僅支援 PDF、Word、PowerPoint 或圖片' };
-  }
+  const mimeType = resolveTextbookMime(file);
+  const mimeErr = validateTextbookMime(mimeType);
+  if (mimeErr) return { ok: false, error: mimeErr };
 
   let blob: Blob = file;
   let fileName = file.name;
-  let mimeType = mime;
+  let mimeTypeOut = mimeType;
   let sizeBytes = file.size;
   let pageStart: number | null = null;
   let pageEnd: number | null = null;
@@ -59,7 +56,7 @@ export async function prepareLessonTextbookUpload(
 
     blob = new Blob([cropped.bytes.slice()], { type: 'application/pdf' });
     fileName = buildCroppedPdfFileName(file.name, parsed.pageStart, parsed.pageEnd);
-    mimeType = 'application/pdf';
+    mimeTypeOut = 'application/pdf';
     sizeBytes = blob.size;
     pageStart = parsed.pageStart;
     pageEnd = parsed.pageEnd;
@@ -75,7 +72,7 @@ export async function prepareLessonTextbookUpload(
     payload: {
       blob,
       fileName,
-      mimeType,
+      mimeType: mimeTypeOut,
       sizeBytes,
       pageStart,
       pageEnd,

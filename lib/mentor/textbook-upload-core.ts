@@ -1,14 +1,10 @@
 import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@/lib/supabase/server';
-import type { Profile, TablesInsert } from '@/types/database.types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database, Profile, TablesInsert } from '@/types/database.types';
 
-import {
-  buildCroppedPdfFileName,
-  extractPdfPageRange,
-  isPdfFile,
-  parsePdfPageRange,
-} from '@/lib/mentor/pdf-crop';
+import { prepareLessonTextbookUpload } from '@/lib/mentor/textbook-upload-payload';
 import {
   removeLessonTextbookFile,
   uploadLessonTextbookPayload,
@@ -27,12 +23,10 @@ export type RegisterLessonTextbookInput = {
   fileName: string;
   mimeType: string;
   fileSizeBytes: number;
-  pageStart: number | null;
-  pageEnd: number | null;
-  sourcePageCount: number | null;
+  pageStart?: number | null;
+  pageEnd?: number | null;
+  sourcePageCount?: number | null;
 };
-
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
 function safeRevalidate(path: string) {
   if (process.env.NODE_ENV === 'development') return;
@@ -79,20 +73,16 @@ export async function getLessonCourseId(lessonId: string): Promise<string> {
   return data.course_id;
 }
 
-/** 瀏覽器直傳 Storage 後，寫入 lesson_textbooks 資料列 */
+/** Storage 上傳完成後寫入資料庫（請求體小，適用 Vercel 部署） */
 export async function registerLessonTextbook(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseClient<Database>,
   courseId: string,
   input: RegisterLessonTextbookInput,
 ): Promise<TextbookUploadResult> {
-  const { lessonId } = input;
-  const title =
-    input.title.trim() || input.fileName.replace(/\.[^.]+$/, '') || input.fileName;
-
   const { data: maxRow } = await supabase
     .from('lesson_textbooks')
     .select('sort_order')
-    .eq('lesson_id', lessonId)
+    .eq('lesson_id', input.lessonId)
     .order('sort_order', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -100,17 +90,17 @@ export async function registerLessonTextbook(
   const nextOrder = (maxRow?.sort_order ?? -1) + 1;
 
   const insert: TablesInsert<'lesson_textbooks'> = {
-    lesson_id: lessonId,
-    title,
+    lesson_id: input.lessonId,
+    title: input.title,
     file_name: input.fileName,
     file_url: input.publicUrl,
     storage_path: input.path,
     mime_type: input.mimeType,
     file_size_bytes: input.fileSizeBytes,
     sort_order: nextOrder,
-    page_start: input.pageStart,
-    page_end: input.pageEnd,
-    source_page_count: input.sourcePageCount,
+    page_start: input.pageStart ?? null,
+    page_end: input.pageEnd ?? null,
+    source_page_count: input.sourcePageCount ?? null,
   };
 
   const { error: insErr } = await supabase.from('lesson_textbooks').insert(insert);
@@ -127,7 +117,7 @@ export async function registerLessonTextbook(
   return { success: `已上傳課本${pageHint}` };
 }
 
-/** 課本上傳核心邏輯（API Route 與 Server Action 共用） */
+/** 經 API 轉傳整檔（本機可用；Vercel 等大檔請改瀏覽器直傳 Storage） */
 export async function uploadLessonTextbookFromFormData(
   lessonId: string,
   formData: FormData,
@@ -148,78 +138,37 @@ export async function uploadLessonTextbookFromFormData(
   const pageEndRaw = String(formData.get('page_end') ?? '');
 
   try {
+    const prepared = await prepareLessonTextbookUpload(file, {
+      cropPdf,
+      pageStartRaw,
+      pageEndRaw,
+    });
+    if (!prepared.ok) return { error: prepared.error };
+
     const courseId = await getLessonCourseId(lessonId);
     const supabase = await createClient();
-
-    let uploadBlob: Blob = file;
-    let uploadName = file.name;
-    let uploadMime = file.type || 'application/octet-stream';
-    let uploadSize = file.size;
-    let pageStart: number | null = null;
-    let pageEnd: number | null = null;
-    let sourcePageCount: number | null = null;
-
-    if (isPdfFile(file) && cropPdf) {
-      const parsed = parsePdfPageRange(pageStartRaw, pageEndRaw);
-      if ('error' in parsed) return { error: parsed.error };
-
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const cropped = await extractPdfPageRange(bytes, parsed.pageStart, parsed.pageEnd);
-      if (!cropped.ok) return { error: cropped.error };
-
-      uploadBlob = new Blob([Buffer.from(cropped.bytes)], { type: 'application/pdf' });
-      uploadName = buildCroppedPdfFileName(file.name, parsed.pageStart, parsed.pageEnd);
-      uploadMime = 'application/pdf';
-      uploadSize = uploadBlob.size;
-      pageStart = parsed.pageStart;
-      pageEnd = parsed.pageEnd;
-      sourcePageCount = cropped.totalPages;
-    }
+    const { payload } = prepared;
 
     const upload = await uploadLessonTextbookPayload(supabase, courseId, lessonId, {
-      data: uploadBlob,
-      fileName: uploadName,
-      mimeType: uploadMime,
-      sizeBytes: uploadSize,
+      data: payload.blob,
+      fileName: payload.fileName,
+      mimeType: payload.mimeType,
+      sizeBytes: payload.sizeBytes,
     });
     if (!upload.ok) return { error: upload.error };
 
-    const { data: maxRow } = await supabase
-      .from('lesson_textbooks')
-      .select('sort_order')
-      .eq('lesson_id', lessonId)
-      .order('sort_order', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const nextOrder = (maxRow?.sort_order ?? -1) + 1;
-
-    const insert: TablesInsert<'lesson_textbooks'> = {
-      lesson_id: lessonId,
+    return registerLessonTextbook(supabase, courseId, {
+      lessonId,
       title,
-      file_name: uploadName,
-      file_url: upload.publicUrl,
-      storage_path: upload.path,
-      mime_type: uploadMime,
-      file_size_bytes: uploadSize,
-      sort_order: nextOrder,
-      page_start: pageStart,
-      page_end: pageEnd,
-      source_page_count: sourcePageCount,
-    };
-
-    const { error: insErr } = await supabase.from('lesson_textbooks').insert(insert);
-    if (insErr) {
-      await removeLessonTextbookFile(supabase, upload.path);
-      return { error: insErr.message };
-    }
-
-    safeRevalidate(`/mentor/courses/${courseId}/edit`);
-    const pageHint =
-      pageStart != null && pageEnd != null
-        ? `（第 ${pageStart}–${pageEnd} 頁）`
-        : '';
-    return { success: `已上傳課本${pageHint}` };
+      path: upload.path,
+      publicUrl: upload.publicUrl,
+      fileName: payload.fileName,
+      mimeType: payload.mimeType,
+      fileSizeBytes: payload.sizeBytes,
+      pageStart: payload.pageStart,
+      pageEnd: payload.pageEnd,
+      sourcePageCount: payload.sourcePageCount,
+    });
   } catch (err) {
     return { error: err instanceof Error ? err.message : '上傳失敗' };
   }

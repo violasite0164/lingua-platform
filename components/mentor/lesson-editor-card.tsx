@@ -281,7 +281,11 @@ export function LessonEditorCard({
                   <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
                   同步影片資訊
                 </Button>
-                <LessonTextbookDialog lessonId={lesson.id} disabled={pending} />
+                <LessonTextbookDialog
+                  lessonId={lesson.id}
+                  courseId={courseId}
+                  disabled={pending}
+                />
                 <LessonCueDialog
                   lessonId={lesson.id}
                   lessonTitle={title}
@@ -293,7 +297,11 @@ export function LessonEditorCard({
             <div className="space-y-3">
               <div className="flex flex-wrap gap-2">
                 <StreamVideoUpload lessonId={lesson.id} disabled={pending} />
-                <LessonTextbookDialog lessonId={lesson.id} disabled={pending} />
+                <LessonTextbookDialog
+                  lessonId={lesson.id}
+                  courseId={courseId}
+                  disabled={pending}
+                />
                 <LessonCueDialog
                   lessonId={lesson.id}
                   lessonTitle={title}
