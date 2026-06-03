@@ -1,5 +1,5 @@
 // ============================================================
-// Lingua Platform — Supabase Database Types
+// Vint Platform — Supabase Database Types
 // 由 schema.sql 手工對應，格式符合 Supabase 官方 Database 型別規範
 // 可用 `supabase gen types typescript` 指令自動重新產生
 // ============================================================
@@ -15,9 +15,24 @@ export type Json =
 // ─── Enum types ───────────────────────────────────────────
 
 export type UserRole         = 'student' | 'mentor' | 'admin';
+export type MentorSpecialty  =
+  | 'activity'
+  | 'science'
+  | 'language'
+  | 'other'
+  | 'technical';
+/** 英語大冒險小編風格 */
+export type QuizEditorPersonality = 'toxic' | 'gentle';
 export type AssignmentType   = 'text' | 'audio' | 'video' | 'image' | 'pdf';
 export type AssignmentStatus = 'submitted' | 'grading' | 'graded' | 'returned';
 export type CourseLevel      = 'beginner' | 'intermediate' | 'advanced';
+export type CourseQuizPlacement = 'after_lesson' | 'final_exam';
+export type CourseQuizChoiceMode = 'three' | 'four';
+export type CourseQuizStepKind = 'video_text' | 'question';
+export type CourseQuizOverlayScope = 'fullscreen' | 'video';
+export type CourseQuizPlayTheme = 'off' | 'magic_forest' | 'kindergarten';
+export type CourseQuizInteractionMode = 'choice_grid' | 'vocabulary_drop';
+export type CourseQuizVocabularyDisplay = 'character' | 'shape';
 
 /** 英語測驗難度（questions.difficulty / user_quiz_scores.difficulty） */
 export type QuizDifficultyLevel =
@@ -57,6 +72,8 @@ export interface Database {
           display_name:      string;
           avatar_url:        string | null;
           bio:               string | null;
+          mentor_specialty:  MentorSpecialty | null;
+          quiz_editor_personality: QuizEditorPersonality | null;
           exp:               number;
           level:             number;
           streak_days:       number;
@@ -72,6 +89,8 @@ export interface Database {
           display_name?:     string;
           avatar_url?:       string | null;
           bio?:              string | null;
+          mentor_specialty?: MentorSpecialty | null;
+          quiz_editor_personality?: QuizEditorPersonality | null;
           exp?:              number;
           level?:            number;
           streak_days?:      number;
@@ -87,6 +106,8 @@ export interface Database {
           display_name?:     string;
           avatar_url?:       string | null;
           bio?:              string | null;
+          mentor_specialty?: MentorSpecialty | null;
+          quiz_editor_personality?: QuizEditorPersonality | null;
           exp?:              number;
           level?:            number;
           streak_days?:      number;
@@ -236,6 +257,390 @@ export interface Database {
         ];
       };
 
+      // ── lesson_textbooks ──────────────────────────────
+      lesson_textbooks: {
+        Row: {
+          id:                string;
+          lesson_id:         string;
+          title:             string;
+          file_name:         string;
+          file_url:          string;
+          storage_path:      string;
+          mime_type:         string | null;
+          file_size_bytes:   number;
+          sort_order:        number;
+          page_start:        number | null;
+          page_end:          number | null;
+          source_page_count: number | null;
+          created_at:        string;
+          updated_at:        string;
+        };
+        Insert: {
+          id?:                string;
+          lesson_id:          string;
+          title:              string;
+          file_name:          string;
+          file_url:           string;
+          storage_path:       string;
+          mime_type?:         string | null;
+          file_size_bytes?:   number;
+          sort_order?:        number;
+          page_start?:        number | null;
+          page_end?:          number | null;
+          source_page_count?: number | null;
+          created_at?:        string;
+          updated_at?:        string;
+        };
+        Update: {
+          title?:             string;
+          file_name?:         string;
+          file_url?:          string;
+          storage_path?:      string;
+          mime_type?:         string | null;
+          file_size_bytes?:   number;
+          sort_order?:        number;
+          page_start?:        number | null;
+          page_end?:          number | null;
+          source_page_count?: number | null;
+          updated_at?:        string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lesson_textbooks_lesson_id_fkey';
+            columns: ['lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── lesson_timed_cues ───────────────────────────
+      lesson_timed_cues: {
+        Row: {
+          id:               string;
+          lesson_id:        string;
+          trigger_at_sec:   number;
+          cue_type:         'sentence' | 'multiple_choice' | 'text_input';
+          payload:          Json;
+          sort_order:       number;
+          is_enabled:       boolean;
+          created_at:       string;
+          updated_at:       string;
+        };
+        Insert: {
+          id?:              string;
+          lesson_id:        string;
+          trigger_at_sec:   number;
+          cue_type:         'sentence' | 'multiple_choice' | 'text_input';
+          payload:          Json;
+          sort_order?:      number;
+          is_enabled?:      boolean;
+          created_at?:      string;
+          updated_at?:      string;
+        };
+        Update: {
+          trigger_at_sec?:  number;
+          cue_type?:        'sentence' | 'multiple_choice' | 'text_input';
+          payload?:         Json;
+          sort_order?:      number;
+          is_enabled?:      boolean;
+          updated_at?:      string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lesson_timed_cues_lesson_id_fkey';
+            columns: ['lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── lesson_cue_answers ────────────────────────────
+      lesson_cue_answers: {
+        Row: {
+          user_id:     string;
+          lesson_id:   string;
+          cue_id:      string;
+          answered_at: string;
+        };
+        Insert: {
+          user_id:     string;
+          lesson_id:   string;
+          cue_id:      string;
+          answered_at?: string;
+        };
+        Update: {
+          answered_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'lesson_cue_answers_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'lesson_cue_answers_lesson_id_fkey';
+            columns: ['lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'lesson_cue_answers_cue_id_fkey';
+            columns: ['cue_id'];
+            referencedRelation: 'lesson_timed_cues';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── course_quizzes ────────────────────────────────
+      course_quizzes: {
+        Row: {
+          id:                          string;
+          course_id:                   string;
+          title:                       string;
+          placement:                   CourseQuizPlacement;
+          choice_mode:                 CourseQuizChoiceMode;
+          play_theme:                  CourseQuizPlayTheme;
+          interaction_mode:            CourseQuizInteractionMode;
+          vocabulary_display:          CourseQuizVocabularyDisplay;
+          shape_typeface_url:          string | null;
+          after_lesson_id:             string | null;
+          require_to_continue:         boolean;
+          require_to_complete_course:  boolean;
+          xp_reward:                   number;
+          is_published:                boolean;
+          sort_order:                  number;
+          created_at:                  string;
+          updated_at:                  string;
+        };
+        Insert: {
+          id?:                         string;
+          course_id:                   string;
+          title?:                      string;
+          placement?:                  CourseQuizPlacement;
+          choice_mode?:                CourseQuizChoiceMode;
+          play_theme?:                 CourseQuizPlayTheme;
+          interaction_mode?:           CourseQuizInteractionMode;
+          vocabulary_display?:         CourseQuizVocabularyDisplay;
+          shape_typeface_url?:         string | null;
+          after_lesson_id?:            string | null;
+          require_to_continue?:        boolean;
+          require_to_complete_course?: boolean;
+          xp_reward?:                  number;
+          is_published?:               boolean;
+          sort_order?:                 number;
+          created_at?:                 string;
+          updated_at?:                 string;
+        };
+        Update: {
+          title?:                      string;
+          placement?:                  CourseQuizPlacement;
+          choice_mode?:                CourseQuizChoiceMode;
+          play_theme?:                 CourseQuizPlayTheme;
+          interaction_mode?:           CourseQuizInteractionMode;
+          vocabulary_display?:         CourseQuizVocabularyDisplay;
+          shape_typeface_url?:         string | null;
+          after_lesson_id?:            string | null;
+          require_to_continue?:        boolean;
+          require_to_complete_course?:  boolean;
+          xp_reward?:                  number;
+          is_published?:               boolean;
+          sort_order?:                 number;
+          updated_at?:                 string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'course_quizzes_course_id_fkey';
+            columns: ['course_id'];
+            referencedRelation: 'courses';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'course_quizzes_after_lesson_id_fkey';
+            columns: ['after_lesson_id'];
+            referencedRelation: 'lessons';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── course_quiz_questions ─────────────────────────
+      course_quiz_questions: {
+        Row: {
+          id:              string;
+          quiz_id:         string;
+          sort_order:      number;
+          question_text:       string;
+          question_speech_text: string;
+          options:             Json;
+          correct_index:       number;
+          explanation:         string | null;
+          cf_video_uid:        string | null;
+          cf_correct_video_uid: string | null;
+          cf_wrong_video_uid:   string | null;
+          question_audio_url:  string | null;
+          option_audio_urls:   Json;
+          option_image_urls:   Json;
+          option_shape_glyphs: Json;
+          vocabulary_display:  CourseQuizVocabularyDisplay;
+          created_at:          string;
+          updated_at:          string;
+        };
+        Insert: {
+          id?:                 string;
+          quiz_id:             string;
+          sort_order?:         number;
+          question_text:        string;
+          question_speech_text?: string;
+          options?:             Json;
+          correct_index?:       number;
+          explanation?:         string | null;
+          cf_video_uid?:        string | null;
+          cf_correct_video_uid?: string | null;
+          cf_wrong_video_uid?:   string | null;
+          question_audio_url?:  string | null;
+          option_audio_urls?:   Json;
+          option_image_urls?:   Json;
+          option_shape_glyphs?: Json;
+          vocabulary_display?:  CourseQuizVocabularyDisplay;
+          created_at?:          string;
+          updated_at?:          string;
+        };
+        Update: {
+          sort_order?:          number;
+          question_text?:       string;
+          question_speech_text?: string;
+          options?:             Json;
+          correct_index?:      number;
+          explanation?:        string | null;
+          cf_video_uid?:       string | null;
+          cf_correct_video_uid?: string | null;
+          cf_wrong_video_uid?:   string | null;
+          question_audio_url?: string | null;
+          option_audio_urls?:  Json;
+          option_image_urls?:  Json;
+          option_shape_glyphs?: Json;
+          vocabulary_display?:  CourseQuizVocabularyDisplay;
+          updated_at?:         string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'course_quiz_questions_quiz_id_fkey';
+            columns: ['quiz_id'];
+            referencedRelation: 'course_quizzes';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── course_quiz_steps ───────────────────────────────
+      course_quiz_steps: {
+        Row: {
+          id:              string;
+          quiz_id:         string;
+          sort_order:      number;
+          step_kind:       CourseQuizStepKind;
+          question_id:     string | null;
+          text_content:    string | null;
+          font_family:     string;
+          font_size_px:    number;
+          text_color:      string;
+          text_align:      string;
+          text_animation:  string;
+          overlay_scope:   CourseQuizOverlayScope;
+          created_at:      string;
+          updated_at:      string;
+        };
+        Insert: {
+          id?:             string;
+          quiz_id:         string;
+          sort_order?:     number;
+          step_kind:       CourseQuizStepKind;
+          question_id?:    string | null;
+          text_content?:   string | null;
+          font_family?:    string;
+          font_size_px?:   number;
+          text_color?:     string;
+          text_align?:     string;
+          text_animation?: string;
+          overlay_scope?:  CourseQuizOverlayScope;
+          created_at?:     string;
+          updated_at?:     string;
+        };
+        Update: {
+          sort_order?:     number;
+          step_kind?:      CourseQuizStepKind;
+          question_id?:    string | null;
+          text_content?:   string | null;
+          font_family?:    string;
+          font_size_px?:   number;
+          text_color?:     string;
+          text_align?:     string;
+          text_animation?: string;
+          overlay_scope?:  CourseQuizOverlayScope;
+          updated_at?:     string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'course_quiz_steps_quiz_id_fkey';
+            columns: ['quiz_id'];
+            referencedRelation: 'course_quizzes';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'course_quiz_steps_question_id_fkey';
+            columns: ['question_id'];
+            referencedRelation: 'course_quiz_questions';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
+      // ── user_course_quiz_progress ─────────────────────
+      user_course_quiz_progress: {
+        Row: {
+          user_id:       string;
+          quiz_id:       string;
+          completed:     boolean;
+          completed_at:  string | null;
+          xp_granted:    boolean;
+          created_at:    string;
+          updated_at:    string;
+        };
+        Insert: {
+          user_id:       string;
+          quiz_id:       string;
+          completed?:    boolean;
+          completed_at?: string | null;
+          xp_granted?:   boolean;
+          created_at?:   string;
+          updated_at?:   string;
+        };
+        Update: {
+          completed?:    boolean;
+          completed_at?: string | null;
+          xp_granted?:   boolean;
+          updated_at?:   string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_course_quiz_progress_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_course_quiz_progress_quiz_id_fkey';
+            columns: ['quiz_id'];
+            referencedRelation: 'course_quizzes';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
+
       // ── enrollments ───────────────────────────────────
       enrollments: {
         Row: {
@@ -271,6 +676,276 @@ export interface Database {
             referencedRelation: 'courses';
             referencedColumns: ['id'];
           }
+        ];
+      };
+
+      // ── subscription_plans ─────────────────────────────
+      subscription_plans: {
+        Row: {
+          id: string;
+          code: string;
+          title: string;
+          description: string;
+          price_cents: number;
+          currency: string;
+          stripe_price_id: string | null;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          title: string;
+          description?: string;
+          price_cents?: number;
+          currency?: string;
+          stripe_price_id?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          code?: string;
+          title?: string;
+          description?: string;
+          price_cents?: number;
+          currency?: string;
+          stripe_price_id?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      // ── shop_items ─────────────────────────────────────
+      shop_items: {
+        Row: {
+          id: string;
+          kind: string;
+          title: string;
+          description: string;
+          price_cents: number;
+          currency: string;
+          stripe_price_id: string | null;
+          stamina_amount: number | null;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          title: string;
+          description?: string;
+          price_cents?: number;
+          currency?: string;
+          stripe_price_id?: string | null;
+          stamina_amount?: number | null;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          kind?: string;
+          title?: string;
+          description?: string;
+          price_cents?: number;
+          currency?: string;
+          stripe_price_id?: string | null;
+          stamina_amount?: number | null;
+          is_active?: boolean;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      // ── user_subscriptions ─────────────────────────────
+      user_subscriptions: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_code: string;
+          stripe_customer_id: string | null;
+          stripe_subscription_id: string | null;
+          status: string;
+          current_period_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plan_code: string;
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          status?: string;
+          current_period_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          stripe_customer_id?: string | null;
+          stripe_subscription_id?: string | null;
+          status?: string;
+          current_period_end?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_subscriptions_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      // ── user_purchases ──────────────────────────────────
+      user_purchases: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: string;
+          shop_item_id: string | null;
+          stripe_checkout_session_id: string | null;
+          stripe_payment_intent_id: string | null;
+          amount_cents: number | null;
+          currency: string | null;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: string;
+          shop_item_id?: string | null;
+          stripe_checkout_session_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          amount_cents?: number | null;
+          currency?: string | null;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          stripe_checkout_session_id?: string | null;
+          stripe_payment_intent_id?: string | null;
+          amount_cents?: number | null;
+          currency?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_purchases_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'user_purchases_shop_item_id_fkey';
+            columns: ['shop_item_id'];
+            referencedRelation: 'shop_items';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      // ── stripe_events ────────────────────────────────────
+      stripe_events: {
+        Row: {
+          id: string;
+          type: string;
+          created_at: string;
+        };
+        Insert: {
+          id: string;
+          type: string;
+          created_at?: string;
+        };
+        Update: {
+          type?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      // ── profile_inbox_messages ─────────────────────────
+      profile_inbox_messages: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          body: string;
+          payload: Record<string, unknown>;
+          read_at: string | null;
+          claimed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: string;
+          title: string;
+          body?: string;
+          payload?: Record<string, unknown>;
+          read_at?: string | null;
+          claimed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          kind?: string;
+          title?: string;
+          body?: string;
+          payload?: Record<string, unknown>;
+          read_at?: string | null;
+          claimed_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'profile_inbox_messages_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      // ── user_game_stamina ────────────────────────────────
+      user_game_stamina: {
+        Row: {
+          user_id: string;
+          stamina: number;
+          stamina_anchor: string;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          stamina?: number;
+          stamina_anchor?: string;
+          updated_at?: string;
+        };
+        Update: {
+          stamina?: number;
+          stamina_anchor?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'user_game_stamina_user_id_fkey';
+            columns: ['user_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
         ];
       };
 
@@ -458,6 +1133,30 @@ export interface Database {
         Relationships: FKRelationship[];
       };
 
+      // ── vocabulary_words（Stage 2 生字庫）──────────────
+      vocabulary_words: {
+        Row: {
+          id:          string;
+          word:        string;
+          grade_level: QuizDifficultyLevel;
+          meaning_zh:  string | null;
+          created_at:  string;
+        };
+        Insert: {
+          id?:          string;
+          word:        string;
+          grade_level?: QuizDifficultyLevel;
+          meaning_zh?:  string | null;
+          created_at?:  string;
+        };
+        Update: {
+          word?:        string;
+          grade_level?: QuizDifficultyLevel;
+          meaning_zh?:  string | null;
+        };
+        Relationships: FKRelationship[];
+      };
+
       // ── user_quiz_scores（測驗各難度最高分）─────────────
       user_quiz_scores: {
         Row: {
@@ -486,7 +1185,7 @@ export interface Database {
         ];
       };
 
-      // ── quiz_attempts（AI英語鬥每局紀錄）───────────────
+      // ── quiz_attempts（英語大冒險每局紀錄）───────────────
       quiz_attempts: {
         Row: {
           id:                   string;
@@ -527,6 +1226,7 @@ export interface Database {
         Row: {
           id: number;
           background_image_url: string | null;
+          background_image_urls: Json;
           background_video_url: string | null;
           overlay_opacity: number;
           background_image_enabled: boolean;
@@ -536,6 +1236,18 @@ export interface Database {
           home_quiz_intro_text: string | null;
           home_quiz_cta_text: string | null;
           home_quiz_result_background_image_url: string | null;
+          quiz_stage_start_video_url: string | null;
+          quiz_stage_complete_video_url: string | null;
+          quiz_elementary_start_video_url: string | null;
+          quiz_elementary_complete_video_url: string | null;
+          quiz_junior_start_video_url: string | null;
+          quiz_junior_complete_video_url: string | null;
+          quiz_college_start_video_url: string | null;
+          quiz_college_complete_video_url: string | null;
+          quiz_professor_start_video_url: string | null;
+          quiz_professor_complete_video_url: string | null;
+          quiz_game_bgm_volume_pct: number;
+          quiz_game_sfx_volume_pct: number;
           features_student_image_url: string | null;
           home_teachers_card_1_image_url: string | null;
           home_teachers_card_2_image_url: string | null;
@@ -546,6 +1258,7 @@ export interface Database {
         Insert: {
           id?: number;
           background_image_url?: string | null;
+          background_image_urls?: Json;
           background_video_url?: string | null;
           overlay_opacity?: number;
           background_image_enabled?: boolean;
@@ -555,6 +1268,18 @@ export interface Database {
           home_quiz_intro_text?: string | null;
           home_quiz_cta_text?: string | null;
           home_quiz_result_background_image_url?: string | null;
+          quiz_stage_start_video_url?: string | null;
+          quiz_stage_complete_video_url?: string | null;
+          quiz_elementary_start_video_url?: string | null;
+          quiz_elementary_complete_video_url?: string | null;
+          quiz_junior_start_video_url?: string | null;
+          quiz_junior_complete_video_url?: string | null;
+          quiz_college_start_video_url?: string | null;
+          quiz_college_complete_video_url?: string | null;
+          quiz_professor_start_video_url?: string | null;
+          quiz_professor_complete_video_url?: string | null;
+          quiz_game_bgm_volume_pct?: number;
+          quiz_game_sfx_volume_pct?: number;
           features_student_image_url?: string | null;
           home_teachers_card_1_image_url?: string | null;
           home_teachers_card_2_image_url?: string | null;
@@ -564,6 +1289,7 @@ export interface Database {
         };
         Update: {
           background_image_url?: string | null;
+          background_image_urls?: Json;
           background_video_url?: string | null;
           overlay_opacity?: number;
           background_image_enabled?: boolean;
@@ -573,6 +1299,18 @@ export interface Database {
           home_quiz_intro_text?: string | null;
           home_quiz_cta_text?: string | null;
           home_quiz_result_background_image_url?: string | null;
+          quiz_stage_start_video_url?: string | null;
+          quiz_stage_complete_video_url?: string | null;
+          quiz_elementary_start_video_url?: string | null;
+          quiz_elementary_complete_video_url?: string | null;
+          quiz_junior_start_video_url?: string | null;
+          quiz_junior_complete_video_url?: string | null;
+          quiz_college_start_video_url?: string | null;
+          quiz_college_complete_video_url?: string | null;
+          quiz_professor_start_video_url?: string | null;
+          quiz_professor_complete_video_url?: string | null;
+          quiz_game_bgm_volume_pct?: number;
+          quiz_game_sfx_volume_pct?: number;
           features_student_image_url?: string | null;
           home_teachers_card_1_image_url?: string | null;
           home_teachers_card_2_image_url?: string | null;
@@ -651,6 +1389,10 @@ export interface Database {
         Args:    { p_user_id: string; p_lesson_id: string };
         Returns: void;
       };
+      grant_course_quiz_xp: {
+        Args:    { p_user_id: string; p_quiz_id: string };
+        Returns: void;
+      };
       update_streak: {
         Args:    { p_user_id: string };
         Returns: void;
@@ -667,6 +1409,19 @@ export interface Database {
       is_enrolled: {
         Args:    { p_course_id: string };
         Returns: boolean;
+      };
+      quiz_user_stat_rank: {
+        Args:    { p_difficulty: string; p_user_id: string };
+        Returns: { user_rank: number | null; total_players: number }[];
+      };
+      record_quiz_session: {
+        Args: {
+          p_difficulty: string;
+          p_correct_count: number;
+          p_total_questions: number;
+          p_total_answer_seconds: number;
+        };
+        Returns: Json;
       };
     };
 
@@ -696,8 +1451,21 @@ export type TablesUpdate<T extends keyof Database['public']['Tables']> =
 export type Profile       = Tables<'profiles'>;
 export type Category      = Tables<'categories'>;
 export type Course        = Tables<'courses'>;
-export type Lesson        = Tables<'lessons'>;
-export type Enrollment    = Tables<'enrollments'>;
+export type Lesson           = Tables<'lessons'>;
+export type LessonTextbook   = Tables<'lesson_textbooks'>;
+export type LessonTimedCue   = Tables<'lesson_timed_cues'>;
+export type CourseQuiz       = Tables<'course_quizzes'>;
+export type CourseQuizQuestion = Tables<'course_quiz_questions'>;
+export type CourseQuizStep = Tables<'course_quiz_steps'>;
+export type UserCourseQuizProgress = Tables<'user_course_quiz_progress'>;
+export type Enrollment       = Tables<'enrollments'>;
+export type SubscriptionPlan = Tables<'subscription_plans'>;
+export type ShopItem         = Tables<'shop_items'>;
+export type UserSubscription = Tables<'user_subscriptions'>;
+export type UserPurchase     = Tables<'user_purchases'>;
+export type StripeEvent      = Tables<'stripe_events'>;
+export type ProfileInboxMessage = Tables<'profile_inbox_messages'>;
+export type UserGameStamina  = Tables<'user_game_stamina'>;
 export type UserProgress  = Tables<'user_progress'>;
 export type Assignment    = Tables<'assignments'>;
 export type Badge         = Tables<'badges'>;
@@ -710,7 +1478,10 @@ export type HomepageConfig   = Tables<'homepage_config'>;
 // ─── Enriched / joined types ──────────────────────────────
 
 export interface CourseWithTeacher extends Course {
-  teacher: Pick<Profile, 'id' | 'display_name' | 'avatar_url'>;
+  teacher: Pick<
+    Profile,
+    'id' | 'display_name' | 'avatar_url' | 'bio' | 'mentor_specialty'
+  >;
   category: Category | null;
 }
 
@@ -723,10 +1494,20 @@ export interface AssignmentWithStudent extends Assignment {
   lesson:  Pick<Lesson,  'id' | 'title'>;
 }
 
+export interface CourseQuizWithProgress extends CourseQuiz {
+  progress: UserCourseQuizProgress | null;
+  question_count?: number;
+}
+
 export interface CourseWithLessons extends CourseWithTeacher {
   lessons: LessonWithProgress[];
+  quizzes: CourseQuizWithProgress[];
   is_enrolled: boolean;
 }
+
+export type CourseRoadmapItem =
+  | { kind: 'lesson'; lesson: LessonWithProgress; lessonIndex: number }
+  | { kind: 'quiz'; quiz: CourseQuizWithProgress };
 
 // ─── XP / Level helpers ───────────────────────────────────
 

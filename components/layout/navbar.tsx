@@ -9,17 +9,16 @@ import {
   ChevronsUp,
   Flame,
   LogOut,
-  Maximize2,
   Menu,
-  Minimize2,
   Moon,
   Settings,
   Sun,
   Trophy,
   User,
   X,
+  Inbox,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,7 +31,9 @@ import { LevelBadge } from '@/components/gamification/level-badge';
 import { MarketingThemeCycleButton } from '@/components/marketing-theme-cycle-button';
 import { XpBar } from '@/components/gamification/xp-bar';
 import { createClient } from '@/lib/supabase/client';
+import { getProfileInboxUnreadCount } from '@/lib/profile/inbox-actions';
 import type { Profile } from '@/types/database.types';
+import { Badge } from '@/components/ui/badge';
 import { useFooterVisibility } from '@/components/providers/footer-visibility-provider';
 import { GUEST_HOME_PATH } from '@/lib/site-routes';
 import { cn } from '@/lib/utils';
@@ -40,113 +41,101 @@ import { cn } from '@/lib/utils';
 const NAV_LINKS = [
   { href: '/dashboard',   label: '學習進度' },
   { href: '/courses',     label: '課程' },
+  { href: '/commerce',    label: '訂閱與商店' },
+  { href: '/games',       label: '英語大冒險' },
   { href: '/leaderboard', label: '排行榜' },
-  { href: '/quiz',        label: 'AI英語鬥' },
 ];
 
-/** 是否具備 DOM 全螢幕 API（無則隱藏按鈕，例如多數 iPhone Safari） */
-function supportsDomFullscreen(): boolean {
-  if (typeof document === 'undefined') return false;
-  const root = document.documentElement;
-  const hasStandard = typeof root.requestFullscreen === 'function';
-  const hasWebkit =
-    typeof (root as HTMLElement & { webkitRequestFullscreen?: () => void }).webkitRequestFullscreen ===
-    'function';
-  if (!hasStandard && !hasWebkit) return false;
-  if ('fullscreenEnabled' in document && document.fullscreenEnabled === false) return false;
-  return true;
+function navHrefPath(href: string): string {
+  return href.split('#')[0] ?? href;
 }
 
-export function Navbar() {
+function isNavLinkActive(pathname: string, link: (typeof NAV_LINKS)[number]): boolean {
+  const base = navHrefPath(link.href);
+  if (link.href === '/games') {
+    return pathname.startsWith('/games') || pathname.startsWith('/quiz');
+  }
+  if (base === '/commerce') {
+    return pathname.startsWith('/commerce');
+  }
+  return pathname.startsWith(base);
+}
+
+type NavbarProps = {
+  /** 由 Server Component 注入，避免客戶端 session 與 cookie 不同步時誤顯示「登入」 */
+  initialProfile?: Profile | null;
+};
+
+export function Navbar({ initialProfile = null }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const { footerVisible, toggleFooter } = useFooterVisibility();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(initialProfile);
+  const [inboxUnread, setInboxUnread] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [fullscreenCapable, setFullscreenCapable] = useState(false);
   const [themeMounted, setThemeMounted] = useState(false);
   const supabase = createClient();
+
+  const refreshProfile = useCallback(async () => {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error || !user) {
+      setProfile(null);
+      setInboxUnread(0);
+      return;
+    }
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    if (data) setProfile(data);
+    if (data) {
+      const count = await getProfileInboxUnreadCount();
+      setInboxUnread(count);
+    } else {
+      setInboxUnread(0);
+    }
+  }, [supabase]);
 
   useEffect(() => {
     setThemeMounted(true);
   }, []);
 
   useEffect(() => {
-    setFullscreenCapable(supportsDomFullscreen());
-    const sync = () => {
-      const d = document as Document & { webkitFullscreenElement?: Element | null };
-      setIsFullscreen(!!(document.fullscreenElement ?? d.webkitFullscreenElement));
-    };
-    sync();
-    document.addEventListener('fullscreenchange', sync);
-    document.addEventListener('webkitfullscreenchange', sync);
-    return () => {
-      document.removeEventListener('fullscreenchange', sync);
-      document.removeEventListener('webkitfullscreenchange', sync);
-    };
-  }, []);
-
-  async function toggleFullscreen() {
-    const root = document.documentElement;
-    const doc = document as Document & {
-      webkitExitFullscreen?: () => Promise<void> | void;
-      webkitFullscreenElement?: Element | null;
-    };
-    const rootWk = root as HTMLElement & { webkitRequestFullscreen?: () => void };
-    try {
-      const inFs = document.fullscreenElement ?? doc.webkitFullscreenElement;
-      if (!inFs) {
-        if (typeof root.requestFullscreen === 'function') {
-          await root.requestFullscreen();
-        } else if (typeof rootWk.webkitRequestFullscreen === 'function') {
-          await Promise.resolve(rootWk.webkitRequestFullscreen());
-        }
-      } else {
-        if (typeof document.exitFullscreen === 'function') {
-          await document.exitFullscreen();
-        } else if (typeof doc.webkitExitFullscreen === 'function') {
-          await Promise.resolve(doc.webkitExitFullscreen());
-        }
-      }
-    } catch {
-      // 瀏覽器拒絕全螢幕
-    }
-  }
+    setProfile(initialProfile);
+  }, [initialProfile]);
 
   useEffect(() => {
-    // getSession() reads the JWT from cookie — no network round-trip.
-    // We use it only for the initial render; the auth state listener keeps
-    // things in sync whenever the session actually changes.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session?.user) return;
-      supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data }) => setProfile(data));
-    });
+    void refreshProfile();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT' || !session?.user) {
         setProfile(null);
+        setInboxUnread(0);
         return;
       }
-      // Refresh profile on sign-in or token refresh
-      if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-        supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-          .then(({ data }) => setProfile(data));
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'INITIAL_SESSION' ||
+        event === 'USER_UPDATED'
+      ) {
+        void refreshProfile();
       }
     });
     return () => listener.subscription.unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [supabase, refreshProfile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    if (pathname === '/profile') {
+      void getProfileInboxUnreadCount().then(setInboxUnread);
+    }
+  }, [pathname, profile]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -155,6 +144,9 @@ export function Navbar() {
     router.refresh();
   }
 
+  const isAdmin = profile?.role === 'admin';
+  const visibleNavLinks = NAV_LINKS;
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-14 items-center px-4">
@@ -162,24 +154,55 @@ export function Navbar() {
         {/* Logo */}
         <Link href={GUEST_HOME_PATH} className="flex items-center gap-2 font-bold text-lg mr-6">
           <BookOpen className="h-5 w-5 text-primary" />
-          <span>LinguaLearn</span>
+          <span>Vint Platform</span>
         </Link>
 
         {/* Desktop nav links */}
         <nav className="hidden md:flex items-center gap-1 flex-1">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                'px-3 py-1.5 text-sm rounded-md transition-colors',
-                (pathname ?? '').startsWith(link.href)
-                  ? 'text-foreground font-medium bg-accent'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
-              )}
-            >
-              {link.label}
-            </Link>
+          {visibleNavLinks.map((link) => (
+            <span key={`${link.href}-${link.label}`} className="inline-flex items-center gap-1">
+              <Link
+                href={link.href}
+                className={cn(
+                  'px-3 py-1.5 text-sm rounded-md transition-colors',
+                  isNavLinkActive(pathname ?? '', link)
+                    ? 'text-foreground font-medium bg-accent'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50',
+                )}
+              >
+                {link.label}
+              </Link>
+              {link.href === '/games' && profile?.role === 'admin' ? (
+                <span className="inline-flex items-center gap-1">
+                  <Link
+                    href="/games?stage=junior"
+                    className={cn(
+                      'rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-violet-700 transition-colors hover:bg-violet-500/20 dark:text-violet-200',
+                      (pathname ?? '').startsWith('/games') ||
+                        (pathname ?? '').startsWith('/quiz')
+                        ? 'ring-1 ring-violet-500/30'
+                        : '',
+                    )}
+                    title="管理員：直達 Stage 2 分身術"
+                  >
+                    Stage 2
+                  </Link>
+                  <Link
+                    href="/games?stage=college"
+                    className={cn(
+                      'rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-2 py-1 text-[11px] font-semibold text-fuchsia-700 transition-colors hover:bg-fuchsia-500/20 dark:text-fuchsia-200',
+                      (pathname ?? '').startsWith('/games') ||
+                        (pathname ?? '').startsWith('/quiz')
+                        ? 'ring-1 ring-fuchsia-500/30'
+                        : '',
+                    )}
+                    title="管理員：直達 Stage 3 迪斯可拼字"
+                  >
+                    Stage 3
+                  </Link>
+                </span>
+              ) : null}
+            </span>
           ))}
         </nav>
 
@@ -209,22 +232,6 @@ export function Navbar() {
               <Moon className="h-4 w-4" aria-hidden />
             )}
           </Button>
-
-          {fullscreenCapable && (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => void toggleFullscreen()}
-              aria-label={isFullscreen ? '離開全螢幕' : '全螢幕顯示'}
-              title={isFullscreen ? '離開全螢幕' : '全螢幕顯示'}
-            >
-              {isFullscreen ? (
-                <Minimize2 className="h-4 w-4" aria-hidden />
-              ) : (
-                <Maximize2 className="h-4 w-4" aria-hidden />
-              )}
-            </Button>
-          )}
 
           <Button
             variant="ghost"
@@ -293,8 +300,35 @@ export function Navbar() {
                   <DropdownMenuSeparator />
 
                   <DropdownMenuItem asChild>
-                    <Link href="/profile">
-                      <User className="h-4 w-4" />個人資料
+                    <Link href="/profile" className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        個人資料
+                      </span>
+                      {inboxUnread > 0 ? (
+                        <Badge
+                          variant="destructive"
+                          className="h-5 min-w-5 rounded-full px-1.5 text-[10px] font-bold"
+                        >
+                          {inboxUnread > 99 ? '99+' : inboxUnread}
+                        </Badge>
+                      ) : null}
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/profile#inbox" className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2">
+                        <Inbox className="h-4 w-4" />
+                        收件匣
+                      </span>
+                      {inboxUnread > 0 ? (
+                        <Badge
+                          variant="destructive"
+                          className="h-5 min-w-5 rounded-full px-1.5 text-[10px] font-bold animate-pulse"
+                        >
+                          {inboxUnread > 99 ? '99+' : inboxUnread}
+                        </Badge>
+                      ) : null}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -318,6 +352,14 @@ export function Navbar() {
                         <DropdownMenuItem asChild>
                           <Link href="/mentor">
                             <Settings className="h-4 w-4" />導師後台
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      {profile.role === 'admin' && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/commerce/manage">
+                            <Settings className="h-4 w-4" />
+                            商家後台
                           </Link>
                         </DropdownMenuItem>
                       )}
@@ -357,20 +399,39 @@ export function Navbar() {
       {/* Mobile nav */}
       {mobileOpen && (
         <div className="md:hidden border-t bg-background px-4 py-3 space-y-1">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                'flex items-center px-3 py-2 rounded-md text-sm transition-colors',
-                (pathname ?? '').startsWith(link.href)
-                  ? 'bg-accent text-foreground font-medium'
-                  : 'text-muted-foreground hover:bg-accent/50',
-              )}
-            >
-              {link.label}
-            </Link>
+          {visibleNavLinks.map((link) => (
+            <div key={`${link.href}-${link.label}`} className="space-y-1">
+              <Link
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  'flex items-center px-3 py-2 rounded-md text-sm transition-colors',
+                  isNavLinkActive(pathname ?? '', link)
+                    ? 'bg-accent text-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-accent/50',
+                )}
+              >
+                {link.label}
+              </Link>
+              {link.href === '/games' && profile?.role === 'admin' ? (
+                <div className="mx-3 flex flex-col gap-1.5">
+                  <Link
+                    href="/games?stage=junior"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center rounded-md border border-violet-500/40 bg-violet-500/10 px-3 py-2 text-sm font-semibold text-violet-700 dark:text-violet-200"
+                  >
+                    Stage 2（管理員）
+                  </Link>
+                  <Link
+                    href="/games?stage=college"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center rounded-md border border-fuchsia-500/40 bg-fuchsia-500/10 px-3 py-2 text-sm font-semibold text-fuchsia-700 dark:text-fuchsia-200"
+                  >
+                    Stage 3（管理員）
+                  </Link>
+                </div>
+              ) : null}
+            </div>
           ))}
           <Separator className="my-2" />
           <div className="flex items-center gap-2 px-3 py-2">
