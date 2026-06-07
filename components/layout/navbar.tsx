@@ -88,6 +88,7 @@ export function Navbar({
   const [inboxUnread, setInboxUnread] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [themeMounted, setThemeMounted] = useState(false);
+  const [hideForMobileLandscapeGame, setHideForMobileLandscapeGame] = useState(false);
   const supabase = createClient();
 
   const refreshProfile = useCallback(async () => {
@@ -194,6 +195,33 @@ export function Navbar({
     }
   }, [pathname, profile]);
 
+  useEffect(() => {
+    const isGameRoute =
+      (pathname ?? '').startsWith('/games') || (pathname ?? '').startsWith('/quiz');
+    if (!isGameRoute) {
+      setHideForMobileLandscapeGame(false);
+      return;
+    }
+
+    const landscapeMobileMq = window.matchMedia(
+      '(orientation: landscape) and ((hover: none) or (pointer: coarse)) and (max-height: 540px)',
+    );
+
+    const sync = () => {
+      setHideForMobileLandscapeGame(landscapeMobileMq.matches);
+    };
+
+    sync();
+    landscapeMobileMq.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
+    window.addEventListener('orientationchange', sync);
+    return () => {
+      landscapeMobileMq.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('orientationchange', sync);
+    };
+  }, [pathname]);
+
   async function handleSignOut() {
     await supabase.auth.signOut();
     /** 避免 `window.location` 整頁重載在 dev / Turbopack 下與 manifest 寫入競態 */
@@ -203,6 +231,10 @@ export function Navbar({
 
   const isAdmin = profile?.role === 'admin';
   const visibleNavLinks = NAV_LINKS;
+
+  if (hideForMobileLandscapeGame) {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
