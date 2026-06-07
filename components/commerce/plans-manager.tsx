@@ -81,7 +81,7 @@ function PlanEditorCard({
     if (state?.ok !== true) return;
     setFormRevision((v) => v + 1);
     router.refresh();
-  }, [state?.ok, state?.message, router]);
+  }, [state?.ok, router]);
 
   const formKey = `${code}-${plan?.updated_at ?? plan?.id ?? 'new'}-${formRevision}`;
 
