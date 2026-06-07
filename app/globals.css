@@ -287,6 +287,19 @@ body {
   }
 }
 
+/* 英語小遊戲 — 遊戲區（明確寬高，避免塌縮成一條線） */
+.games-viewport {
+  height: min(85dvh, 820px);
+  width: min(100%, calc(min(85dvh, 820px) * 9 / 19.5));
+}
+
+@media (min-width: 768px) {
+  .games-viewport {
+    height: min(calc(100dvh - 14rem), 720px);
+    width: min(100%, calc(min(calc(100dvh - 14rem), 720px) * 4 / 3));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .home-quiz-advance-bar {
     animation: none;
