@@ -17,36 +17,34 @@
   height: 100%;
 }
 
-@media (max-width: 896px) and (orientation: portrait) and ((hover: none) or (pointer: coarse)) {
-  html[data-mobile-landscape-forced] {
-    overflow: hidden;
-    height: 100%;
-  }
+html[data-mobile-landscape-forced] {
+  overflow: hidden;
+  height: 100%;
+}
 
-  html[data-mobile-landscape-forced] body {
-    overflow: hidden;
-  }
+html[data-mobile-landscape-forced] body {
+  overflow: hidden;
+}
 
-  .mobile-landscape-root--forced {
-    position: fixed;
-    inset: 0;
-    z-index: 9990;
-    width: 100vw;
-    height: 100dvh;
-    overflow: hidden;
-    background: var(--background, #030712);
-  }
+.mobile-landscape-root--forced {
+  position: fixed;
+  inset: 0;
+  z-index: 9990;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--background, #030712);
+}
 
-  .mobile-landscape-root--forced .mobile-landscape-page {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100dvh;
-    height: 100vw;
-    max-width: none;
-    min-height: 0 !important;
-    transform: translate(-50%, -50%) rotate(90deg);
-    transform-origin: center center;
-    overflow: hidden;
-  }
+.mobile-landscape-root--forced .mobile-landscape-page {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100dvh;
+  height: 100vw;
+  max-width: none;
+  min-height: 0 !important;
+  transform: translate(-50%, -50%) rotate(90deg);
+  transform-origin: center center;
+  overflow: hidden;
 }

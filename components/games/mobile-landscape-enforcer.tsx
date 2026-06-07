@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import '@/app/mobile-landscape.css';
 
 import {
-  getMobileLandscapeMediaQuery,
   tryLockLandscapeOrientation,
 } from '@/lib/games/mobile-landscape';
 import { cn } from '@/lib/utils';
@@ -22,11 +21,23 @@ export function MobileLandscapeEnforcer({ children, className }: Props) {
   const [forced, setForced] = useState(false);
 
   useEffect(() => {
-    const mq = window.matchMedia(getMobileLandscapeMediaQuery());
-    const sync = () => setForced(mq.matches);
+    const coarseMq = window.matchMedia('((hover: none) or (pointer: coarse))');
+    const sync = () => {
+      const w = window.innerWidth || document.documentElement.clientWidth || 0;
+      const h = window.innerHeight || document.documentElement.clientHeight || 0;
+      const portrait = h >= w;
+      const narrowScreen = Math.min(w, h) <= 896;
+      setForced(coarseMq.matches && narrowScreen && portrait);
+    };
     sync();
-    mq.addEventListener('change', sync);
-    return () => mq.removeEventListener('change', sync);
+    coarseMq.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
+    window.addEventListener('orientationchange', sync);
+    return () => {
+      coarseMq.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+      window.removeEventListener('orientationchange', sync);
+    };
   }, []);
 
   useEffect(() => {
