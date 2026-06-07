@@ -106,6 +106,37 @@ export function QuizQuestionMascots({
       setBearPos(bearAnchor && bearBubble ? measureBubble(bearAnchor, sceneRect, 'bear') : null);
       setBoyPos(boyAnchor && boyBubble ? measureBubble(boyAnchor, sceneRect, 'boy') : null);
       setGirlPos(girlAnchor && girlBubble ? measureBubble(girlAnchor, sceneRect, 'girl') : null);
+
+      // 讓題目視窗固定落在左右角色之間（避免隨 viewport 比例漂移）
+      let reserveLeft = nextLayout.leftInset;
+      let reserveRight = nextLayout.rightInset;
+
+      if (bearAnchor) {
+        const bearRect = bearAnchor.getBoundingClientRect();
+        reserveLeft = Math.max(reserveLeft, bearRect.right - sceneRect.left + 8);
+      }
+
+      let rightInnerEdge = Number.POSITIVE_INFINITY;
+      if (boyAnchor) {
+        rightInnerEdge = Math.min(
+          rightInnerEdge,
+          boyAnchor.getBoundingClientRect().left - sceneRect.left,
+        );
+      }
+      if (girlAnchor) {
+        rightInnerEdge = Math.min(
+          rightInnerEdge,
+          girlAnchor.getBoundingClientRect().left - sceneRect.left,
+        );
+      }
+      if (Number.isFinite(rightInnerEdge)) {
+        reserveRight = Math.max(reserveRight, sceneRect.width - rightInnerEdge + 8);
+      }
+
+      const leftPx = `${Math.round(Math.min(reserveLeft, sceneRect.width * 0.42))}px`;
+      const rightPx = `${Math.round(Math.min(reserveRight, sceneRect.width * 0.42))}px`;
+      scene.style.setProperty('--quiz-mascot-reserve-left', leftPx);
+      scene.style.setProperty('--quiz-mascot-reserve-right', rightPx);
     };
 
     const attach = () => {
