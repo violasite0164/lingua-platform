@@ -22,6 +22,32 @@
   background: #0a0612;
 }
 
+.stage3-fixed-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.stage3-fixed-canvas {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  transform: translateX(-50%) scale(var(--stage3-canvas-scale, 1));
+  transform-origin: center top;
+  will-change: transform;
+}
+
+.stage3-root--fixed {
+  width: 1280px;
+  min-height: 720px;
+  height: 720px;
+  flex: 0 0 auto;
+}
+
 .stage3-root--embedded {
   position: absolute;
   inset: 0;

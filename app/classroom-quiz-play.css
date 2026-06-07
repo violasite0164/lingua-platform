@@ -6,6 +6,32 @@
   background-repeat: no-repeat;
 }
 
+.classroom-quiz-fixed-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.classroom-quiz-fixed-canvas {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  transform: translateX(-50%) scale(var(--classroom-quiz-canvas-scale, 1));
+  transform-origin: center top;
+  will-change: transform;
+}
+
+.classroom-quiz-theme-shell--fixed {
+  width: 1280px;
+  min-height: 720px;
+  height: 720px;
+  flex: 0 0 auto;
+}
+
 .classroom-quiz-theme-shell--themed .classroom-quiz-scene {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 0.75rem;

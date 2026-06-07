@@ -13,6 +13,32 @@
   background: var(--stage2-floor-bg, #1a1028);
 }
 
+.stage2-fixed-viewport {
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.stage2-fixed-canvas {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1280px;
+  height: 720px;
+  transform: translateX(-50%) scale(var(--stage2-canvas-scale, 1));
+  transform-origin: center top;
+  will-change: transform;
+}
+
+.stage2-root--fixed {
+  width: 1280px;
+  min-height: 720px;
+  height: 720px;
+  flex: 0 0 auto;
+}
+
 .stage2-root--embedded {
   position: absolute;
   inset: 0;

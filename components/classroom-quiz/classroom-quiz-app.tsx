@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { useLayoutEffect, type CSSProperties } from 'react';
 
 import { markCourseQuizComplete } from '@/app/actions/course-quiz-progress';
 import { ClassroomQuizToolbar } from '@/components/classroom-quiz/classroom-quiz-toolbar';
@@ -81,6 +82,8 @@ export function ClassroomQuizApp({
   initialCompleted: boolean;
   isAdmin?: boolean;
 }) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [canvasScale, setCanvasScale] = useState(1);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const choiceMode = resolveChoiceMode(quiz);
@@ -119,10 +122,32 @@ export function ClassroomQuizApp({
   const [outcomeVideoUid, setOutcomeVideoUid] = useState<string | null>(null);
   const [outcomePopupText, setOutcomePopupText] = useState<string | null>(null);
   const [outcomeWasCorrect, setOutcomeWasCorrect] = useState<boolean | null>(null);
+  const useFixedCanvas = true;
 
   const currentBlock = blocks[blockIndex];
   const current = currentBlock?.question;
   const total = blocks.length;
+
+  useLayoutEffect(() => {
+    if (!useFixedCanvas) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const updateScale = () => {
+      const h = viewport.clientHeight;
+      if (h <= 0) return;
+      const next = h / 720;
+      const clamped = Math.max(0.2, Math.min(next, 3));
+      setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
+    };
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(viewport);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [useFixedCanvas]);
 
   useEffect(() => bindClassroomQuizAudioRuntime(), []);
 
@@ -405,62 +430,128 @@ export function ClassroomQuizApp({
       headerToolbarExtra={shellToolbar}
       cornerControl={classroomBgmCorner}
     >
-      <ClassroomQuizThemeShell
-        playTheme={playTheme}
-        playPhase={playPhase}
-        className="relative"
-      >
-        {playPhase !== 'intro' ? (
-          <ClassroomQuizPlay
-            isAdmin={isAdmin}
-            playTheme={playTheme}
-            interactionMode={interactionMode}
-            shapeTypefaceUrl={
-              (quiz as { shape_typeface_url?: string | null }).shape_typeface_url ?? null
-            }
-            quizTitle={quiz.title}
-            current={current}
-            cursor={blockIndex}
-            total={total}
-            playPhase={playPhase}
-            sessionRevealed={sessionRevealed}
-            videoPlaybackAllowed={videoPlaybackAllowed}
-            showQuestionPanel={showQuestionPanel}
-            outcomeVideoUid={outcomeVideoUid}
-            outcomePopupText={outcomePopupText}
-            onVideoEnded={onVideoEnded}
-            onEnterVocabularyPhase={onEnterVocabularyPhase}
-            picked={picked}
-            answeredThis={answeredThis}
-            isCorrect={isCorrect}
-            characterMood={characterMood}
-            onPickOptionBegin={onPickOptionBegin}
-            onPickOptionReveal={onPickOptionReveal}
-            onAnswerOutcome={onAnswerOutcome}
-            onDismissFeedback={onDismissFeedback}
-            onDismissOutcomePopup={onDismissOutcomePopup}
-          />
-        ) : null}
-        {playPhase === 'intro' &&
-        themeConfig.mascotBoyIntroImageUrl &&
-        themeConfig.mascotGirlIntroImageUrl ? (
-          <ClassroomQuizIntro
-            boyImageUrl={themeConfig.mascotBoyIntroImageUrl}
-            girlImageUrl={themeConfig.mascotGirlIntroImageUrl}
-            onComplete={handleIntroComplete}
-          />
-        ) : null}
-        {pending ? (
+      {useFixedCanvas ? (
+        <div ref={viewportRef} className="classroom-quiz-fixed-viewport">
           <div
-            className="absolute inset-0 z-50 flex items-center justify-center gap-2 bg-background/70 text-sm text-muted-foreground backdrop-blur-[1px]"
-            aria-busy
-            aria-live="polite"
+            className="classroom-quiz-fixed-canvas"
+            style={{ '--classroom-quiz-canvas-scale': canvasScale } as CSSProperties}
           >
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-            儲存進度…
+            <ClassroomQuizThemeShell
+              playTheme={playTheme}
+              playPhase={playPhase}
+              className="relative classroom-quiz-theme-shell--fixed"
+            >
+              {playPhase !== 'intro' ? (
+                <ClassroomQuizPlay
+                  isAdmin={isAdmin}
+                  playTheme={playTheme}
+                  interactionMode={interactionMode}
+                  shapeTypefaceUrl={
+                    (quiz as { shape_typeface_url?: string | null }).shape_typeface_url ?? null
+                  }
+                  quizTitle={quiz.title}
+                  current={current}
+                  cursor={blockIndex}
+                  total={total}
+                  playPhase={playPhase}
+                  sessionRevealed={sessionRevealed}
+                  videoPlaybackAllowed={videoPlaybackAllowed}
+                  showQuestionPanel={showQuestionPanel}
+                  outcomeVideoUid={outcomeVideoUid}
+                  outcomePopupText={outcomePopupText}
+                  onVideoEnded={onVideoEnded}
+                  onEnterVocabularyPhase={onEnterVocabularyPhase}
+                  picked={picked}
+                  answeredThis={answeredThis}
+                  isCorrect={isCorrect}
+                  characterMood={characterMood}
+                  onPickOptionBegin={onPickOptionBegin}
+                  onPickOptionReveal={onPickOptionReveal}
+                  onAnswerOutcome={onAnswerOutcome}
+                  onDismissFeedback={onDismissFeedback}
+                  onDismissOutcomePopup={onDismissOutcomePopup}
+                />
+              ) : null}
+              {playPhase === 'intro' &&
+              themeConfig.mascotBoyIntroImageUrl &&
+              themeConfig.mascotGirlIntroImageUrl ? (
+                <ClassroomQuizIntro
+                  boyImageUrl={themeConfig.mascotBoyIntroImageUrl}
+                  girlImageUrl={themeConfig.mascotGirlIntroImageUrl}
+                  onComplete={handleIntroComplete}
+                />
+              ) : null}
+              {pending ? (
+                <div
+                  className="absolute inset-0 z-50 flex items-center justify-center gap-2 bg-background/70 text-sm text-muted-foreground backdrop-blur-[1px]"
+                  aria-busy
+                  aria-live="polite"
+                >
+                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                  儲存進度…
+                </div>
+              ) : null}
+            </ClassroomQuizThemeShell>
           </div>
-        ) : null}
-      </ClassroomQuizThemeShell>
+        </div>
+      ) : (
+        <ClassroomQuizThemeShell
+          playTheme={playTheme}
+          playPhase={playPhase}
+          className="relative"
+        >
+          {playPhase !== 'intro' ? (
+            <ClassroomQuizPlay
+              isAdmin={isAdmin}
+              playTheme={playTheme}
+              interactionMode={interactionMode}
+              shapeTypefaceUrl={
+                (quiz as { shape_typeface_url?: string | null }).shape_typeface_url ?? null
+              }
+              quizTitle={quiz.title}
+              current={current}
+              cursor={blockIndex}
+              total={total}
+              playPhase={playPhase}
+              sessionRevealed={sessionRevealed}
+              videoPlaybackAllowed={videoPlaybackAllowed}
+              showQuestionPanel={showQuestionPanel}
+              outcomeVideoUid={outcomeVideoUid}
+              outcomePopupText={outcomePopupText}
+              onVideoEnded={onVideoEnded}
+              onEnterVocabularyPhase={onEnterVocabularyPhase}
+              picked={picked}
+              answeredThis={answeredThis}
+              isCorrect={isCorrect}
+              characterMood={characterMood}
+              onPickOptionBegin={onPickOptionBegin}
+              onPickOptionReveal={onPickOptionReveal}
+              onAnswerOutcome={onAnswerOutcome}
+              onDismissFeedback={onDismissFeedback}
+              onDismissOutcomePopup={onDismissOutcomePopup}
+            />
+          ) : null}
+          {playPhase === 'intro' &&
+          themeConfig.mascotBoyIntroImageUrl &&
+          themeConfig.mascotGirlIntroImageUrl ? (
+            <ClassroomQuizIntro
+              boyImageUrl={themeConfig.mascotBoyIntroImageUrl}
+              girlImageUrl={themeConfig.mascotGirlIntroImageUrl}
+              onComplete={handleIntroComplete}
+            />
+          ) : null}
+          {pending ? (
+            <div
+              className="absolute inset-0 z-50 flex items-center justify-center gap-2 bg-background/70 text-sm text-muted-foreground backdrop-blur-[1px]"
+              aria-busy
+              aria-live="polite"
+            >
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+              儲存進度…
+            </div>
+          ) : null}
+        </ClassroomQuizThemeShell>
+      )}
     </GameShell>
   );
 }

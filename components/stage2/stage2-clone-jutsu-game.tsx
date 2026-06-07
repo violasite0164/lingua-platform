@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Fredoka } from 'next/font/google';
 import NextImage from 'next/image';
 
@@ -93,6 +93,9 @@ const fredoka = Fredoka({
   display: 'swap',
 });
 
+const STAGE2_CANVAS_BASE_WIDTH = 1280;
+const STAGE2_CANVAS_BASE_HEIGHT = 720;
+
 export type Stage2ResumeState = {
   roundIndex: number;
   correctCount: number;
@@ -158,9 +161,11 @@ export function Stage2CloneJutsuGame({
   onStageClear,
   onGameOver,
 }: Props) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const arenaRef = useRef<HTMLDivElement>(null);
   const heroesRef = useRef<HTMLDivElement>(null);
   const cloneFieldRef = useRef<HTMLDivElement>(null);
+  const [canvasScale, setCanvasScale] = useState(1);
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [sessionWords, setSessionWords] = useState<Stage2SessionWord[]>([]);
@@ -255,6 +260,29 @@ export function Stage2CloneJutsuGame({
   const cloneCount = STAGE2_CLONE_COUNTS[roundIndex] ?? 3;
   const currentWordEntry = sessionWords[roundIndex];
   const currentWord = currentWordEntry?.word ?? '';
+
+  useLayoutEffect(() => {
+    if (!embedded) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const updateScale = () => {
+      const h = viewport.clientHeight;
+      if (h <= 0) return;
+      const next = h / STAGE2_CANVAS_BASE_HEIGHT;
+      const clamped = Math.max(0.2, Math.min(next, 3));
+      setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
+    };
+
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(viewport);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [embedded]);
 
   const clearHeroineHint = useCallback(() => {
     setHeroineHint(null);
@@ -1100,11 +1128,12 @@ export function Stage2CloneJutsuGame({
     );
   }
 
-  return (
+  const stage2Scene = (
     <div
       className={cn(
         fredoka.className,
         'stage2-root select-none',
+        embedded && 'stage2-root--fixed',
         embedded && 'stage2-root--embedded',
         isLowHealth && 'stage2-root--low-health',
       )}
@@ -1485,6 +1514,21 @@ export function Stage2CloneJutsuGame({
             </span>
           ))}
         </div>
+      </div>
+    </div>
+  );
+
+  if (!embedded) {
+    return stage2Scene;
+  }
+
+  return (
+    <div ref={viewportRef} className="stage2-fixed-viewport">
+      <div
+        className="stage2-fixed-canvas"
+        style={{ '--stage2-canvas-scale': canvasScale } as CSSProperties}
+      >
+        {stage2Scene}
       </div>
     </div>
   );

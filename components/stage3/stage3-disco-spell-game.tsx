@@ -3,10 +3,12 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type AnimationEvent,
+  type CSSProperties,
   type MutableRefObject,
 } from 'react';
 import Image from 'next/image';
@@ -99,6 +101,8 @@ const monoton = Monoton({
   weight: '400',
   display: 'swap',
 });
+
+const STAGE3_CANVAS_BASE_HEIGHT = 720;
 
 type Phase =
   | 'loading'
@@ -553,6 +557,8 @@ function Stage3ArrowKeypad({
 }
 
 export function Stage3DiscoSpellGame({ embedded, resume, onStageClear, onGameOver }: Props) {
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [canvasScale, setCanvasScale] = useState(1);
   const [session] = useState<Stage3Session>(() => resume?.session ?? buildStage3Session());
   const [roundIndex, setRoundIndex] = useState(() => resume?.roundIndex ?? 0);
   const [phase, setPhase] = useState<Phase>('loading');
@@ -1221,11 +1227,35 @@ export function Stage3DiscoSpellGame({ embedded, resume, onStageClear, onGameOve
       isStage3FeverRound(roundIndex)) ||
     isFeverMarquee;
 
-  return (
+  useLayoutEffect(() => {
+    if (!embedded) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const updateScale = () => {
+      const h = viewport.clientHeight;
+      if (h <= 0) return;
+      const next = h / STAGE3_CANVAS_BASE_HEIGHT;
+      const clamped = Math.max(0.2, Math.min(next, 3));
+      setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
+    };
+
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(viewport);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [embedded]);
+
+  const stage3Scene = (
     <div
       className={cn(
         fredoka.className,
         'stage3-root',
+        embedded && 'stage3-root--fixed',
         embedded && 'stage3-root--embedded',
         awardTvOff && 'stage3-root--tv-off',
       )}
@@ -1469,6 +1499,19 @@ export function Stage3DiscoSpellGame({ embedded, resume, onStageClear, onGameOve
             onScoreReveal={handleAwardScoreReveal}
           />
         ) : null}
+      </div>
+    </div>
+  );
+
+  if (!embedded) return stage3Scene;
+
+  return (
+    <div ref={viewportRef} className="stage3-fixed-viewport">
+      <div
+        className="stage3-fixed-canvas"
+        style={{ '--stage3-canvas-scale': canvasScale } as CSSProperties}
+      >
+        {stage3Scene}
       </div>
     </div>
   );
