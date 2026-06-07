@@ -14,9 +14,14 @@ import type { VocabChipBody } from '@/lib/course-quiz/vocabulary-drop-physics';
 
 const IMAGE_PLANE_MAX = 2.65;
 
-function readTextureAspect(texture: { image?: { width?: number; height?: number } }): number {
-  const w = texture.image?.width ?? 1;
-  const h = texture.image?.height ?? 1;
+function readTextureAspect(texture: { image?: unknown }): number {
+  const image = texture.image;
+  if (!image || typeof image !== 'object') return 1;
+
+  const maybeWidth = (image as { width?: unknown }).width;
+  const maybeHeight = (image as { height?: unknown }).height;
+  const w = typeof maybeWidth === 'number' ? maybeWidth : 1;
+  const h = typeof maybeHeight === 'number' ? maybeHeight : 1;
   if (!w || !h) return 1;
   return w / h;
 }
