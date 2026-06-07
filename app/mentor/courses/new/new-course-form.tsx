@@ -32,6 +32,7 @@ const LEVELS = [
 
 type Props = {
   categories: { id: number; name: string }[];
+  planLabels: SubscriptionPlanLabels;
 };
 
 const initialState: ActionState = {};
