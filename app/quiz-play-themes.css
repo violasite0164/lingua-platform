@@ -23,15 +23,15 @@
 
 .quiz-play-root--fixed {
   width: 100%;
-  min-height: 100dvh;
-  height: 100dvh;
+  min-height: 0;
+  height: 100%;
   padding: 0;
   overflow: hidden;
 }
 
 .quiz-play-root--fixed.quiz-play-root--embedded {
-  min-height: calc(100dvh - 3.5rem);
-  height: calc(100dvh - 3.5rem);
+  min-height: 0;
+  height: 100%;
 }
 
 .quiz-play-fixed-viewport {
