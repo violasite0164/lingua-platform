@@ -42,7 +42,7 @@ export function loadPendingContinue(): PendingContinuePayload | null {
       sessionStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    if (parsed.kind === 'stage2-restart' || parsed.kind === 'stage2') {
+    if (parsed.kind === 'stage2-restart') {
       return { kind: 'stage2-restart', savedAt: parsed.savedAt };
     }
     if (parsed.kind === 'stage3-restart') {
