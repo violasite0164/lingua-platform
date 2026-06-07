@@ -49,9 +49,14 @@ export function MobileLandscapeEnforcer({ children, className }: Props) {
 
   return (
     <div
-      className={cn('mobile-landscape-root', forced && 'mobile-landscape-root--forced')}
+      className={cn(
+        'mobile-landscape-root flex min-h-0 w-full flex-1 flex-col',
+        forced && 'mobile-landscape-root--forced',
+      )}
     >
-      <div className={cn('mobile-landscape-page', className)}>{children}</div>
+      <div className={cn('mobile-landscape-page flex min-h-0 w-full flex-1 flex-col', className)}>
+        {children}
+      </div>
     </div>
   );
 }

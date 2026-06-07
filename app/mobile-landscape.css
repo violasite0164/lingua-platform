@@ -1,5 +1,22 @@
 /* 手機直向時以 CSS 旋轉強制橫屏版面（iOS Safari 等無 orientation.lock 時仍有效） */
 
+.mobile-landscape-root {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mobile-landscape-page {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
 @media (max-width: 896px) and (orientation: portrait) and ((hover: none) or (pointer: coarse)) {
   html[data-mobile-landscape-forced] {
     overflow: hidden;
