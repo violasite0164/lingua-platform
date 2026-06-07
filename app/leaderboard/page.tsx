@@ -8,7 +8,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -18,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: '排行榜',
-  description: '總經驗與 AI英語鬥 各難度排行榜。',
+  description: '總經驗與英語大冒險 各難度排行榜。',
 };
 
 function RankMark({ rank }: { rank: number }) {
@@ -90,7 +89,6 @@ export default async function LeaderboardPage() {
             <Flame className="h-5 w-5 text-orange-500" />
             總經驗排行榜
           </CardTitle>
-          <CardDescription>依累積經驗值（EXP）排序，顯示前十名。</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {loggedIn && myExp && (

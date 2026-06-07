@@ -1,6 +1,6 @@
 {
-  "name": "LinguaLearn",
-  "short_name": "Lingua",
+  "name": "Vint Platform",
+  "short_name": "Vint",
   "description": "語言學習平台 — 互動影片課程 + 作業批改系統",
   "start_url": "/",
   "display": "standalone",

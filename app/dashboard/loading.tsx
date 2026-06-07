@@ -73,23 +73,8 @@ export default function DashboardLoading() {
             ))}
           </div>
 
-          {/* Right — assignments + quick actions */}
+          {/* Right — quick actions */}
           <div className="space-y-4 lg:col-span-2">
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-              <div className="p-4 border-b">
-                <Shimmer className="h-5 w-20" />
-              </div>
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex items-start gap-3 px-4 py-3 border-b last:border-0">
-                  <Shimmer className="h-7 w-7 rounded-md shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <Shimmer className="h-3 w-full" />
-                    <Shimmer className="h-3 w-2/3" />
-                    <Shimmer className="h-4 w-14 rounded-full" />
-                  </div>
-                </div>
-              ))}
-            </div>
             <div className="rounded-xl border bg-card shadow-sm p-4 space-y-3">
               <Shimmer className="h-5 w-20" />
               <div className="grid grid-cols-2 gap-2">

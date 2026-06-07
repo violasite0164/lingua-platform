@@ -8,9 +8,9 @@ import { cn } from '@/lib/utils';
 const pressStart2p = Press_Start_2P({ weight: '400', subsets: ['latin'], display: 'swap' });
 
 const LEVEL_LABELS: Record<string, string> = {
-  beginner: '初級',
-  intermediate: '中級',
-  advanced: '進階',
+  beginner: '幼兒',
+  intermediate: '小學',
+  advanced: '中學',
 };
 
 export type HomeLoggedInCourse = {
@@ -27,7 +27,7 @@ type HomeLoggedInDashboardProps = {
 };
 
 /**
- * 登入後首頁：全寬區塊 — 最新課程、8-bit 風格 AI英語鬥 入口
+ * 登入後首頁：全寬區塊 — 最新課程、8-bit 風格英語大冒險 入口
  * 亮色：第一行淺灰帶 `hsl(220 13% 90%)`；第二行白；暗黑：兩段皆沿用頁面 background。
  */
 export function HomeLoggedInDashboard({ courses }: HomeLoggedInDashboardProps) {
@@ -72,11 +72,14 @@ export function HomeLoggedInDashboard({ courses }: HomeLoggedInDashboardProps) {
                   <Card className="h-full overflow-hidden border-border/80 transition-shadow duration-200 hover:shadow-lg">
                     <div className="relative aspect-[16/10] w-full bg-muted">
                       {c.thumbnail_url ? (
-                        <img
-                          src={c.thumbnail_url}
-                          alt=""
-                          className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-                        />
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={c.thumbnail_url}
+                            alt=""
+                            className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                          />
+                        </>
                       ) : (
                         <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                           無縮圖
@@ -100,16 +103,16 @@ export function HomeLoggedInDashboard({ courses }: HomeLoggedInDashboardProps) {
         </div>
       </section>
 
-      {/* 第二行：AI英語鬥 8-bit */}
+      {/* 第二行：英語大冒險 8-bit */}
       <section
         className="relative w-full flex-1 bg-white py-12 sm:py-14 lg:py-16 dark:bg-[hsl(var(--background))]"
         aria-labelledby="home-quiz-arcade"
       >
         <div className="relative mx-auto w-full max-w-[1800px] space-y-4 px-4 sm:px-6 lg:px-10">
           <h2 id="home-quiz-arcade" className="sr-only">
-            AI英語鬥
+            英語大冒險
           </h2>
-          <Link href="/quiz" className="group block w-full select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <Link href="/games" className="group block w-full select-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <div
               className={cn(
                 pressStart2p.className,
@@ -149,7 +152,7 @@ export function HomeLoggedInDashboard({ courses }: HomeLoggedInDashboardProps) {
                       ◆ ARCADE MODE ◆
                     </p>
                     <p className="text-xl leading-tight text-[#fef08a] drop-shadow-[3px_3px_0_rgba(0,0,0,0.85)] sm:text-2xl md:text-3xl">
-                      AI英語鬥
+                      英語大冒險
                     </p>
                     <p className="font-sans text-xs leading-relaxed text-violet-100/95 sm:text-sm">
                       四種難度 · 登入記錄最高分與經驗值

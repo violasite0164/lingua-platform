@@ -2,14 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, BookOpen, ClipboardCheck } from 'lucide-react';
+import { LayoutDashboard, BookOpen, FileQuestion } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 const NAV = [
   { href: '/mentor',             label: '儀表板',  icon: LayoutDashboard },
   { href: '/mentor/courses',     label: '課程管理', icon: BookOpen },
-  { href: '/mentor/assignments', label: '作業審核', icon: ClipboardCheck },
+  { href: '/mentor/course-quizzes', label: '測驗管理', icon: FileQuestion },
 ] as const;
 
 export function MentorNavLinks() {
@@ -28,8 +28,8 @@ export function MentorNavLinks() {
             className={cn(
               'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
               active
-                ? 'bg-zinc-800 text-emerald-300'
-                : 'text-zinc-400 hover:bg-zinc-800/80 hover:text-zinc-100',
+                ? 'bg-accent text-emerald-700 dark:text-emerald-300'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground',
             )}
           >
             <Icon className="h-4 w-4 shrink-0 opacity-90" />

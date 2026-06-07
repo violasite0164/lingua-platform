@@ -53,6 +53,11 @@ async function adminClient() {
 export async function fetchCommerceDashboardStats(): Promise<CommerceDashboardStats> {
   const supabase = await adminClient();
 
+  const { expireStalePendingPurchases } = await import(
+    '@/lib/billing/expire-pending-purchases'
+  );
+  await expireStalePendingPurchases(supabase);
+
   const [
     { data: items },
     { data: plans },
@@ -107,8 +112,41 @@ export async function fetchAllSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   return (data ?? []) as SubscriptionPlan[];
 }
 
+export type SubscriptionPlanGiftEntry = {
+  shopItemId: string;
+  quantity: number;
+};
+
+/** plan_code → 贈送商品與數量 */
+export async function fetchSubscriptionPlanGiftMap(): Promise<
+  Record<string, SubscriptionPlanGiftEntry[]>
+> {
+  const supabase = await adminClient();
+  const { data, error } = await supabase
+    .from('subscription_plan_gifts')
+    .select('plan_code, shop_item_id, quantity');
+  if (error) throw new Error(error.message);
+
+  const map: Record<string, SubscriptionPlanGiftEntry[]> = {};
+  for (const row of data ?? []) {
+    const code = row.plan_code as string;
+    const shopItemId = row.shop_item_id as string;
+    const quantity =
+      typeof row.quantity === 'number' && row.quantity >= 1 ? row.quantity : 1;
+    if (!map[code]) map[code] = [];
+    map[code].push({ shopItemId, quantity });
+  }
+  return map;
+}
+
 export async function fetchCommerceOrders(limit = 200): Promise<CommerceOrderRow[]> {
   const supabase = await adminClient();
+
+  const { expireStalePendingPurchases } = await import(
+    '@/lib/billing/expire-pending-purchases'
+  );
+  await expireStalePendingPurchases(supabase);
+
   const { data, error } = await supabase
     .from('user_purchases')
     .select(

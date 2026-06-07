@@ -14,6 +14,8 @@
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
+import { writeDistManifestSkeletonsIfMissing } from '../scripts/next-dist-manifest-skeleton.mjs';
+
 let devPollingStarted = false;
 
 export function isNextDevTurbopack(): boolean {
@@ -87,6 +89,8 @@ function writeVirtualPagesManifestStubs(pagesDir: string): void {
 
 export function writeNextServerSkeletonsIfMissing(): void {
   const root = process.cwd();
+  writeDistManifestSkeletonsIfMissing(root);
+
   const serverDir = join(root, '.next', 'server');
   const pagesDir = join(serverDir, 'pages');
   mkdirSync(serverDir, { recursive: true });
@@ -153,7 +157,7 @@ try {
  * Webpack hooks still lose races vs Next opening manifests during route compilation.
  * Poll only while `next dev`; still only writes files that are missing.
  */
-export function startDevManifestSkeletonPolling(intervalMs = 75): void {
+export function startDevManifestSkeletonPolling(intervalMs = 500): void {
   if (devPollingStarted) return;
   if (typeof process === 'undefined' || !process.argv.includes('dev')) return;
   devPollingStarted = true;

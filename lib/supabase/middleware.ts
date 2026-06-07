@@ -15,21 +15,69 @@ import type { UserRole } from '@/types/database.types';
 
 type CookieList = Parameters<SetAllCookies>[0];
 
+/** 同日只打一次 update_streak，避免每個請求都等 Supabase RPC */
+const STREAK_COOKIE = 'lingua_streak_day';
+const STREAK_RPC_TIMEOUT_MS = 4_000;
+/** 遠端驗證逾時；過長會拖慢每個請求 */
+const AUTH_GET_USER_TIMEOUT_MS = 5_000;
+
+/** Supabase SSR 寫入的 session cookie（sb-*-auth-token 等） */
+function hasSupabaseAuthCookies(request: NextRequest): boolean {
+  return request.cookies.getAll().some((c) => c.name.startsWith('sb-'));
+}
+
+/**
+ * 僅在需要守衛或可能需刷新 session 時才呼叫 auth API。
+ * 公開頁且無 session cookie → 略過，避免每個請求都打 Supabase。
+ */
+function shouldValidateAuth(request: NextRequest, pathname: string): boolean {
+  if (isProtected(pathname)) return true;
+  if (isAuthOnlyPath(pathname)) return true;
+  if (hasSupabaseAuthCookies(request)) return true;
+  return false;
+}
+
+type MiddlewareUser = { id: string };
+
+function todayUtcDateKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${label} timed out after ${ms}ms`)),
+          ms,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 // ─── Route configuration ────────────────────────────────────────────────────
 
 /**
  * 需要登入才能訪問的路由前綴
  * startsWith 匹配，/courses 會同時覆蓋 /courses/[id] 等子路由
  *
- * 注意：勿用 `/quiz` 前綴 — 會誤匹配未來路徑如 `/quizzes`。AI英語鬥僅 `/quiz` 及其子路徑。
+ * 注意：勿用 `/quiz` 前綴 — 會誤匹配未來路徑如 `/quizzes`。
+ * `/games`、`/quiz` 英語大冒險及其子路徑須登入。
  * 首頁訪客的「英語測驗」在 `/`，不在此範圍。
  */
 const PROTECTED_PREFIXES = [
   '/dashboard',
   '/courses',
+  '/learn',
   '/profile',
   '/admin',
   '/mentor',
+  '/commerce',
 ] as const;
 
 /**
@@ -45,16 +93,24 @@ const AUTH_ONLY_PATHS = ['/login', '/register'] as const;
 const ROLE_PROTECTED: Array<{ prefix: string; roles: UserRole[] }> = [
   { prefix: '/admin',  roles: ['admin'] },
   { prefix: '/mentor', roles: ['mentor', 'admin'] },
+  /** 商店商家後台（前台 /commerce 僅需登入，見 PROTECTED_PREFIXES） */
+  { prefix: '/commerce/manage', roles: ['admin'] },
 ];
 
 // ─── Helper functions ───────────────────────────────────────────────────────
 
-/** AI英語鬥 `/quiz`（不含首頁 `/` 上的公開測驗） */
+/** 英語大冒險 `/quiz`（不含首頁 `/` 上的公開測驗） */
 function isQuizAppRoute(pathname: string): boolean {
   return pathname === '/quiz' || pathname.startsWith('/quiz/');
 }
 
+/** 英語大冒險 */
+function isGamesRoute(pathname: string): boolean {
+  return pathname === '/games' || pathname.startsWith('/games/');
+}
+
 function isProtected(pathname: string): boolean {
+  if (isGamesRoute(pathname)) return true;
   if (isQuizAppRoute(pathname)) return true;
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
@@ -69,6 +125,24 @@ function requiredRoles(pathname: string): UserRole[] | null {
 }
 
 /** 從 profiles 表取得使用者角色（僅在需要角色驗證時呼叫，避免不必要的 DB 查詢） */
+async function resolveMiddlewareUser(
+  supabase: SupabaseClient<Database>,
+): Promise<MiddlewareUser | null> {
+  try {
+    const { data, error } = await withTimeout(
+      supabase.auth.getUser(),
+      AUTH_GET_USER_TIMEOUT_MS,
+      'auth.getUser',
+    );
+    if (error) throw error;
+    return data.user;
+  } catch (err) {
+    console.warn('[middleware] auth.getUser failed, using getSession fallback:', err);
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user ?? null;
+  }
+}
+
 async function getUserRole(
   supabase: SupabaseClient<Database>,
   userId: string,
@@ -84,6 +158,12 @@ async function getUserRole(
 // ─── Main middleware ─────────────────────────────────────────────────────────
 
 export async function updateSession(request: NextRequest) {
+  const url = request.nextUrl;
+
+  if (!shouldValidateAuth(request, url.pathname)) {
+    return NextResponse.next({ request });
+  }
+
   // Supabase SSR 需要一個可修改 cookies 的 response 物件
   let supabaseResponse = NextResponse.next({ request });
 
@@ -110,26 +190,48 @@ export async function updateSession(request: NextRequest) {
     },
   ) as unknown as SupabaseClient<Database>;
 
-  // ⚠️ 重要：getUser() 必須在任何路由邏輯之前呼叫
-  //    這是 @supabase/ssr 刷新 session 的必要步驟，不可省略
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // ⚠️ getUser() 須在路由邏輯前呼叫（@supabase/ssr 刷新 session）
+  const user = await resolveMiddlewareUser(supabase);
 
-  const { pathname } = request.nextUrl;
+  // 已登入：每日至多一次 streak RPC（cookie 節流 + 逾時，不阻塞頁面）
+  if (user) {
+    const today = todayUtcDateKey();
+    if (request.cookies.get(STREAK_COOKIE)?.value !== today) {
+      try {
+        const streakResult = await withTimeout(
+          supabase.rpc('update_streak', { p_user_id: user.id }),
+          STREAK_RPC_TIMEOUT_MS,
+          'update_streak',
+        );
+        const streakErr = (streakResult as { error: { message: string } | null }).error;
+        if (streakErr) {
+          console.error('[middleware] update_streak failed:', streakErr.message);
+        } else {
+          supabaseResponse.cookies.set(STREAK_COOKIE, today, {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 60 * 60 * 26,
+          });
+        }
+      } catch (err) {
+        console.error('[middleware] update_streak skipped:', err);
+      }
+    }
+  }
 
   // ── 1. 未登入 → 存取保護路由 ──────────────────────────────────
-  if (!user && isProtected(pathname)) {
-    const redirectUrl = request.nextUrl.clone();
+  if (!user && isProtected(url.pathname)) {
+    const redirectUrl = url.clone();
     redirectUrl.pathname = '/login';
     // 保存原始路徑，登入後可跳回
-    redirectUrl.searchParams.set('redirect', pathname);
+    redirectUrl.searchParams.set('redirect', url.pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
   // ── 2. 已登入 → 存取 auth 頁面（login / register）───────────
-  if (user && isAuthOnlyPath(pathname)) {
-    const redirectUrl = request.nextUrl.clone();
+  if (user && isAuthOnlyPath(url.pathname)) {
+    const redirectUrl = url.clone();
     redirectUrl.pathname = '/dashboard';
     redirectUrl.search = '';
     return NextResponse.redirect(redirectUrl);
@@ -137,14 +239,14 @@ export async function updateSession(request: NextRequest) {
 
   // ── 3. 角色守衛（僅在需要時才查詢 DB）────────────────────────
   if (user) {
-    const roles = requiredRoles(pathname);
+    const roles = requiredRoles(url.pathname);
 
     if (roles !== null) {
       const userRole = await getUserRole(supabase, user.id);
 
       if (!userRole || !roles.includes(userRole)) {
         // 角色不足：導向 dashboard 而非 403，避免資訊洩漏
-        const redirectUrl = request.nextUrl.clone();
+        const redirectUrl = url.clone();
         redirectUrl.pathname = '/dashboard';
         redirectUrl.search = '';
         return NextResponse.redirect(redirectUrl);

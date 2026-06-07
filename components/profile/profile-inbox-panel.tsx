@@ -2,22 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
+import { zhTW } from 'date-fns/locale/zh-TW';
 import { Inbox, Loader2, Mail, Zap, CheckCircle2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  claimProfileInboxStaminaPack,
-  listProfileInboxMessages,
-  markProfileInboxRead,
-} from '@/lib/profile/inbox-actions';
-import {
   canClaimStaminaPack,
   isProfileInboxUnread,
   type ProfileInboxMessage,
+  type ProfileInboxStaminaPayload,
 } from '@/lib/profile/inbox-types';
+import type { GameStaminaState } from '@/lib/game/stamina';
 import { cn } from '@/lib/utils';
 
 export function ProfileInboxPanel({
@@ -36,33 +33,72 @@ export function ProfileInboxPanel({
     [messages],
   );
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (options?: { reconcile?: boolean }) => {
     setLoading(true);
     setError(null);
-    const res = await listProfileInboxMessages();
-    if (!res.ok) {
-      setError(res.message);
+    try {
+      const url = options?.reconcile
+        ? '/api/profile/inbox?reconcile=1'
+        : '/api/profile/inbox';
+      const res = await fetch(url, { cache: 'no-store' });
+      const json = (await res.json()) as {
+        ok?: boolean;
+        message?: string;
+        messages?: Array<{
+          id: string;
+          kind: string;
+          title: string;
+          body: string;
+          payload: unknown;
+          read_at: string | null;
+          claimed_at: string | null;
+          created_at: string;
+        }>;
+      };
+      if (!res.ok || !json.ok || !json.messages) {
+        setError(json.message ?? '無法載入收件匣');
+        setMessages([]);
+        onUnreadChange?.(0);
+        return;
+      }
+      const mapped: ProfileInboxMessage[] = json.messages.map((row) => {
+        const payload =
+          row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload)
+            ? (row.payload as ProfileInboxStaminaPayload)
+            : {};
+        return {
+          id: row.id,
+          kind: row.kind === 'stamina_pack' ? 'stamina_pack' : 'system',
+          title: row.title,
+          body: row.body ?? '',
+          payload,
+          read_at: row.read_at,
+          claimed_at: row.claimed_at,
+          created_at: row.created_at,
+        };
+      });
+      setMessages(mapped);
+      onUnreadChange?.(mapped.filter((m) => isProfileInboxUnread(m)).length);
+    } catch {
+      setError('無法載入收件匣，請稍後再試');
       setMessages([]);
-      setLoading(false);
       onUnreadChange?.(0);
-      return;
+    } finally {
+      setLoading(false);
     }
-    setMessages(res.messages);
-    const unread = res.messages.filter((m) => isProfileInboxUnread(m)).length;
-    onUnreadChange?.(unread);
-    setLoading(false);
   }, [onUnreadChange]);
 
   useEffect(() => {
-    void load();
+    void load({ reconcile: true });
   }, [load]);
 
   async function handleMarkAllRead() {
     const unreadIds = messages.filter((m) => isProfileInboxUnread(m)).map((m) => m.id);
     if (unreadIds.length === 0) return;
-    const res = await markProfileInboxRead();
-    if (!res.ok) {
-      setError(res.message);
+    const res = await fetch('/api/profile/inbox/read', { method: 'POST' });
+    const json = (await res.json()) as { ok?: boolean; message?: string };
+    if (!res.ok || !json.ok) {
+      setError(json.message ?? '無法更新已讀狀態');
       return;
     }
     const now = new Date().toISOString();
@@ -76,10 +112,28 @@ export function ProfileInboxPanel({
     if (!canClaimStaminaPack(message)) return;
     setClaimingId(message.id);
     setClaimFeedback(null);
-    const res = await claimProfileInboxStaminaPack(message.id);
+    let res: Response;
+    let json: {
+      ok?: boolean;
+      message?: string;
+      granted?: number;
+      stamina?: GameStaminaState;
+    };
+    try {
+      res = await fetch('/api/profile/inbox/claim', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId: message.id }),
+      });
+      json = (await res.json()) as typeof json;
+    } catch {
+      setClaimingId(null);
+      setClaimFeedback('體力回復失敗，請稍後再試');
+      return;
+    }
     setClaimingId(null);
-    if (!res.ok) {
-      setClaimFeedback(res.message);
+    if (!res.ok || !json.ok || !json.stamina || json.granted == null) {
+      setClaimFeedback(json.message ?? '體力回復失敗');
       return;
     }
     const now = new Date().toISOString();
@@ -92,7 +146,9 @@ export function ProfileInboxPanel({
       onUnreadChange?.(next.filter((m) => isProfileInboxUnread(m)).length);
       return next;
     });
-    setClaimFeedback(`已回復 ${res.granted} 點體力，目前體力 ${res.stamina.stamina}/${res.stamina.max}`);
+    setClaimFeedback(
+      `已回復 ${json.granted} 點體力，目前體力 ${json.stamina.stamina}/${json.stamina.max}`,
+    );
     window.setTimeout(() => setClaimFeedback(null), 4000);
   }
 
@@ -118,9 +174,6 @@ export function ProfileInboxPanel({
             </Button>
           ) : null}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          購買的體力道具與通知會出現在這裡；未讀訊息會以醒目樣式標示。
-        </p>
       </CardHeader>
 
       <CardContent className="p-0">

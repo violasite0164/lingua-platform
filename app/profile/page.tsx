@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -18,7 +18,6 @@ import type {
   QuizEditorPersonality,
 } from '@/types/database.types';
 import { MENTOR_SPECIALTY_OPTIONS } from '@/lib/mentor-specialty';
-import { saveQuizEditorPersonality } from '@/lib/quiz/actions';
 import {
   isQuizEditorPersonality,
   writeQuizEditorPersonalityToStorage,
@@ -34,7 +33,11 @@ import { Label }    from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { LevelBadge } from '@/components/gamification/level-badge';
-import { ProfileInboxPanel } from '@/components/profile/profile-inbox-panel';
+import { ProfileSubscriptionPanel } from '@/components/profile/profile-subscription-panel';
+import type {
+  ProfileSubscriptionRow,
+  SubscriptionPlanMeta,
+} from '@/lib/profile/subscription-display';
 
 // ─── Role config ────────────────────────────────────────────────────────────
 
@@ -60,7 +63,7 @@ const ROLE_CONFIG: Record<UserRole, { label: string; icon: React.ReactNode; colo
 
 export default function ProfilePage() {
   const router   = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [profile,      setProfile]      = useState<Profile | null>(null);
   const [email,        setEmail]        = useState('');
@@ -82,6 +85,8 @@ export default function ProfilePage() {
   const [savingQuizStyle, setSavingQuizStyle] = useState(false);
   const [quizStyleError, setQuizStyleError] = useState<string | null>(null);
   const [quizStyleSuccess, setQuizStyleSuccess] = useState(false);
+  const [subscriptions, setSubscriptions] = useState<ProfileSubscriptionRow[]>([]);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlanMeta[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const fieldClass =
@@ -114,6 +119,39 @@ export default function ProfilePage() {
         }
       }
 
+      const [{ data: subRows }, { data: planRows }] = await Promise.all([
+        supabase
+          .from('user_subscriptions')
+          .select('plan_code, status, current_period_end, updated_at')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false }),
+        supabase
+          .from('subscription_plans')
+          .select('code, title, description')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true }),
+      ]);
+
+      if (subRows) {
+        setSubscriptions(
+          subRows.map((row) => ({
+            plan_code: row.plan_code,
+            status: row.status,
+            current_period_end: row.current_period_end,
+            updated_at: row.updated_at,
+          })),
+        );
+      }
+      if (planRows) {
+        setSubscriptionPlans(
+          planRows.map((row) => ({
+            code: row.code,
+            title: row.title,
+            description: row.description ?? '',
+          })),
+        );
+      }
+
       // 已完成課堂數
       const { count } = await supabase
         .from('user_progress')
@@ -125,7 +163,7 @@ export default function ProfilePage() {
       setLoading(false);
     }
     load();
-  }, []);
+  }, [router, supabase]);
 
   // ── Edit display name ─────────────────────────────────────
 
@@ -170,17 +208,28 @@ export default function ProfilePage() {
 
   const isMentorOrAdmin =
     profile?.role === 'mentor' || profile?.role === 'admin';
+  const isAdmin = profile?.role === 'admin';
 
   async function saveQuizPersonality() {
-    if (!profile || !quizPersonality) return;
+    if (!profile || profile.role !== 'admin' || !quizPersonality) return;
     setSavingQuizStyle(true);
     setQuizStyleError(null);
     setQuizStyleSuccess(false);
     writeQuizEditorPersonalityToStorage(quizPersonality);
-    const res = await saveQuizEditorPersonality(quizPersonality);
+    const { error } = await supabase
+      .from('profiles')
+      .update({ quiz_editor_personality: quizPersonality } as never)
+      .eq('id', profile.id);
     setSavingQuizStyle(false);
-    if (res.error) {
-      setQuizStyleError(res.error);
+    if (error) {
+      const msg = error.message ?? '';
+      if (msg.includes('quiz_editor_personality') || error.code === '42703') {
+        setQuizStyleError(
+          '資料庫尚未更新，請執行 migration：20260525170000_profiles_quiz_editor_personality.sql',
+        );
+      } else {
+        setQuizStyleError(error.message || '儲存失敗');
+      }
       return;
     }
     setProfile((prev) =>
@@ -357,7 +406,7 @@ export default function ProfilePage() {
           ))}
         </div>
 
-        <ProfileInboxPanel />
+        <ProfileSubscriptionPanel subscriptions={subscriptions} plans={subscriptionPlans} />
 
         {/* ── Edit profile ───────────────────────────────────── */}
         <Card className="border-border/60 shadow-sm">
@@ -462,48 +511,50 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">英語大冒險 · 小編風格</CardTitle>
-            <p className="text-xs text-muted-foreground font-normal mt-1">
-              影響測驗中的即時評語與結算評語；可隨時切換毒舌或溫柔治癒。
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <EditorPersonalityPicker
-              value={quizPersonality}
-              onChange={(id) => {
-                setQuizPersonality(id);
-                setQuizStyleError(null);
-                setQuizStyleSuccess(false);
-              }}
-              disabled={savingQuizStyle}
-            />
-            {quizStyleError && (
-              <p className="text-xs text-destructive">{quizStyleError}</p>
-            )}
-            {quizStyleSuccess && (
-              <p className="text-xs text-green-600 dark:text-green-400">
-                ✓ 小編風格已儲存
+        {isAdmin && (
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">英語大冒險 · 小編風格</CardTitle>
+              <p className="text-xs text-muted-foreground font-normal mt-1">
+                影響測驗中的即時評語與結算評語；可隨時切換毒舌或溫柔治癒。
               </p>
-            )}
-            <Button
-              type="button"
-              onClick={() => void saveQuizPersonality()}
-              disabled={!quizPersonality || savingQuizStyle}
-              className="w-full sm:w-auto"
-            >
-              {savingQuizStyle ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  儲存中…
-                </>
-              ) : (
-                '儲存小編風格'
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <EditorPersonalityPicker
+                value={quizPersonality}
+                onChange={(id) => {
+                  setQuizPersonality(id);
+                  setQuizStyleError(null);
+                  setQuizStyleSuccess(false);
+                }}
+                disabled={savingQuizStyle}
+              />
+              {quizStyleError && (
+                <p className="text-xs text-destructive">{quizStyleError}</p>
               )}
-            </Button>
-          </CardContent>
-        </Card>
+              {quizStyleSuccess && (
+                <p className="text-xs text-green-600 dark:text-green-400">
+                  ✓ 小編風格已儲存
+                </p>
+              )}
+              <Button
+                type="button"
+                onClick={() => void saveQuizPersonality()}
+                disabled={!quizPersonality || savingQuizStyle}
+                className="w-full sm:w-auto"
+              >
+                {savingQuizStyle ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    儲存中…
+                  </>
+                ) : (
+                  '儲存小編風格'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {isMentorOrAdmin && (
           <Card className="border-border/60 shadow-sm">

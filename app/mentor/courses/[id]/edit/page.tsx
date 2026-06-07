@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 
+import { getSubscriptionPlanLabels } from '@/lib/billing/queries';
 import { createClient } from '@/lib/supabase/server';
 import { requireMentor } from '@/lib/mentor/auth';
 import { getMentorCourseForEdit } from '@/lib/mentor/queries';
@@ -19,16 +20,17 @@ export default async function MentorEditCoursePage({
   }
 
   const supabase = await createClient();
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name')
-    .order('name');
+  const [{ data: categories }, planLabels] = await Promise.all([
+    supabase.from('categories').select('id, name').order('name'),
+    getSubscriptionPlanLabels(),
+  ]);
 
   return (
     <MentorCourseEditForm
       course={pack.course}
       lessons={pack.lessons}
       categories={categories ?? []}
+      planLabels={planLabels}
     />
   );
 }

@@ -238,12 +238,12 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
         className={cn(
           'relative flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 transition-colors select-none',
           dragging
-            ? 'border-emerald-400 bg-emerald-950/30'
+            ? 'border-emerald-500 bg-emerald-500/10'
             : isDone
-              ? 'border-emerald-600/60 bg-emerald-950/20'
+              ? 'border-emerald-600/60 bg-emerald-500/10'
               : phase === 'error'
-                ? 'border-red-500/50 bg-red-950/20'
-                : 'border-zinc-700 bg-zinc-900/50 hover:border-zinc-500 hover:bg-zinc-800/50',
+                ? 'border-destructive/50 bg-destructive/10'
+                : 'border-border bg-muted/50 hover:border-emerald-500/50 hover:bg-muted',
           (disabled || isActive) && 'pointer-events-none opacity-70',
         )}
       >
@@ -264,22 +264,22 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
         ) : (
           <Film className={cn(
             'h-10 w-10',
-            phase === 'error' ? 'text-red-400' : 'text-zinc-500',
+            phase === 'error' ? 'text-destructive' : 'text-muted-foreground',
           )} />
         )}
 
         <div className="text-center">
           {file ? (
             <>
-              <p className="text-sm font-medium text-zinc-200">{file.name}</p>
-              <p className="text-xs text-zinc-500 mt-0.5">{formatBytes(file.size)}</p>
+              <p className="text-sm font-medium text-foreground">{file.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{formatBytes(file.size)}</p>
             </>
           ) : (
             <>
-              <p className="text-sm font-medium text-zinc-300">
+              <p className="text-sm font-medium text-foreground">
                 {dragging ? '放開以選取' : '拖放影片或點此選取'}
               </p>
-              <p className="mt-0.5 text-xs text-zinc-500">
+              <p className="mt-0.5 text-xs text-muted-foreground">
                 MP4、MOV、AVI、WebM … 最大 10 GB
               </p>
             </>
@@ -291,10 +291,10 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
           <div className="w-full max-w-xs space-y-1">
             <Progress
               value={progress}
-              className="h-2 bg-zinc-800"
+              className="h-2 bg-muted"
               indicatorClassName="bg-emerald-500"
             />
-            <p className="text-center text-xs text-zinc-400">{phaseLabel[phase]}</p>
+            <p className="text-center text-xs text-muted-foreground">{phaseLabel[phase]}</p>
           </div>
         )}
       </div>
@@ -310,7 +310,7 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
         <p className="text-sm text-emerald-400">✓ 影片已上傳並連結到此單元</p>
       )}
       {phase === 'requesting' && (
-        <p className="text-xs text-zinc-500">正在聯繫 Cloudflare Stream…</p>
+        <p className="text-xs text-muted-foreground">正在聯繫 Cloudflare Stream…</p>
       )}
 
       {/* 操作按鈕 */}
@@ -330,7 +330,7 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
               type="button"
               size="sm"
               variant="ghost"
-              className="text-zinc-400"
+              className="text-muted-foreground"
               onClick={reset}
             >
               取消選取
@@ -343,7 +343,6 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
             type="button"
             size="sm"
             variant="destructive"
-            className="bg-red-900/60 hover:bg-red-800"
             onClick={cancelUpload}
           >
             取消上傳
@@ -355,7 +354,6 @@ export function VideoUploadZone({ onComplete, disabled, className }: Props) {
             type="button"
             size="sm"
             variant="outline"
-            className="border-zinc-600 text-zinc-300"
             onClick={reset}
           >
             重新選取

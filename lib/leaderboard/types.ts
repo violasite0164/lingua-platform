@@ -2,18 +2,17 @@
  * 排行榜共用型別與常數（可被 Client / Server 安全匯入；勿在此檔 import server-only 模組）
  */
 
+import { getQuizStageLabel, QUIZ_DIFFICULTY_ORDER } from '@/lib/quiz/constants';
 import type { QuizDifficultyLevel } from '@/types/database.types';
 
 export const QUIZ_LEADERBOARD_LEVELS: {
   id: QuizDifficultyLevel;
   label: string;
   short: string;
-}[] = [
-  { id: 'elementary', label: '初級 Elementary', short: '初級' },
-  { id: 'junior', label: '中級 Junior', short: '中級' },
-  { id: 'college', label: '大學 College', short: '大學' },
-  { id: 'professor', label: '教授 Professor', short: '教授' },
-];
+}[] = QUIZ_DIFFICULTY_ORDER.map((id) => {
+  const stage = getQuizStageLabel(id);
+  return { id, label: stage, short: stage };
+});
 
 export type ExpLeaderboardEntry = {
   rank: number;

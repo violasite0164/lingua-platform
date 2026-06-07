@@ -1,7 +1,13 @@
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+import { fulfillCourseEnrollment } from '@/lib/billing/fulfill-course-checkout';
 import { deliverStaminaPackToInbox } from '@/lib/billing/inbox-delivery';
+import { ensureShopPurchaseRecord } from '@/lib/billing/ensure-shop-purchase';
+import {
+  applyStripeSubscriptionEvent,
+  syncStripeSubscriptionToDb,
+} from '@/lib/billing/sync-stripe-subscription';
 import { createAdminClient } from '@/lib/supabase/server';
 import { getStripeServer } from '@/lib/stripe/server';
 
@@ -95,30 +101,44 @@ export async function POST(req: Request) {
           }
         }
 
-        if (shopItemId && purchaseId) {
-          await supabase
-            .from('user_purchases')
-            .update({ shop_item_id: shopItemId } as never)
-            .eq('id', purchaseId);
-        }
+      }
+
+      if (md.kind === 'course' && userId && md.course_id) {
+        const paymentId =
+          typeof session.payment_intent === 'string'
+            ? session.payment_intent
+            : session.id;
+        await fulfillCourseEnrollment(supabase, {
+          userId,
+          courseId: md.course_id,
+          stripePaymentId: paymentId,
+        });
       }
 
       if (md.kind === 'subscription' && userId) {
         const planCode = md.plan_code || 'unknown';
-        await supabase
-          .from('user_subscriptions')
-          .upsert(
+        const stripeSubId =
+          typeof session.subscription === 'string' ? session.subscription : null;
+
+        if (stripeSubId) {
+          await syncStripeSubscriptionToDb(supabase, {
+            userId,
+            planCode,
+            stripeSubscriptionId: stripeSubId,
+            stripeCustomerId: (session.customer as string | null) ?? null,
+          });
+        } else {
+          await supabase.from('user_subscriptions').upsert(
             {
               user_id: userId,
               plan_code: planCode,
               stripe_customer_id: (session.customer as string | null) ?? null,
-              stripe_subscription_id: (session.subscription as string | null) ?? null,
               status: 'active',
             } as never,
             { onConflict: 'user_id,plan_code' },
           );
+        }
 
-        // store stripe customer id on profile for future use
         if (session.customer) {
           await supabase
             .from('profiles')
@@ -126,6 +146,28 @@ export async function POST(req: Request) {
             .eq('id', userId);
         }
       }
+    }
+
+    if (event.type === 'checkout.session.expired') {
+      const session = event.data.object as { id: string };
+      await supabase
+        .from('user_purchases')
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() } as never)
+        .eq('stripe_checkout_session_id', session.id)
+        .eq('status', 'pending');
+    }
+
+    if (
+      event.type === 'customer.subscription.updated' ||
+      event.type === 'customer.subscription.deleted'
+    ) {
+      const sub = event.data.object as {
+        id: string;
+        status: string;
+        current_period_end?: number;
+        customer?: string | null;
+      };
+      await applyStripeSubscriptionEvent(supabase, sub);
     }
   } catch (e) {
     // Don't throw; Stripe will retry. But we should signal failure.

@@ -1,11 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { BookOpen, Users } from 'lucide-react';
 
-import { getPublishedCourses } from '@/lib/supabase/queries';
+import { parseCourseCatalogSearchParams } from '@/lib/courses/catalog';
+import { getSubscriptionPlanLabels } from '@/lib/billing/queries';
+import { getPublicCategories, getPublishedCourses } from '@/lib/supabase/queries';
+import { CourseSubscriptionBadges } from '@/components/courses/course-subscription-badges';
+import { CoursesCatalogToolbar } from '@/components/courses/courses-catalog-toolbar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCoursePriceLabel, isCoursePurchased } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,16 +30,17 @@ const GRADIENTS = [
 ];
 
 const LEVEL_LABELS: Record<string, string> = {
-  beginner:     '初級',
-  intermediate: '中級',
-  advanced:     '進階',
+  beginner:     '幼兒',
+  intermediate: '小學',
+  advanced:     '中學',
 };
 
 const LEVEL_COLORS: Record<string, string> = {
-  beginner:     'bg-emerald-600/20 text-emerald-400',
-  intermediate: 'bg-amber-600/20 text-amber-400',
-  advanced:     'bg-rose-600/20 text-rose-400',
+  beginner:     'bg-emerald-600/20 text-emerald-700 dark:text-emerald-400',
+  intermediate: 'bg-amber-600/20 text-amber-800 dark:text-amber-400',
+  advanced:     'bg-rose-600/20 text-rose-800 dark:text-rose-400',
 };
+
 
 function CoursePlaceholderThumbnail({ title }: { title: string }) {
   const idx = title.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % GRADIENTS.length;
@@ -55,8 +62,29 @@ function CoursePlaceholderThumbnail({ title }: { title: string }) {
   );
 }
 
-export default async function CoursesPage() {
-  const courses = await getPublishedCourses({ limit: 60 });
+type PageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function CoursesPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const filters = parseCourseCatalogSearchParams(sp);
+
+  const [courses, categories, planLabels] = await Promise.all([
+    getPublishedCourses({
+      sort: filters.sort,
+      level: filters.level,
+      categorySlug: filters.categorySlug,
+      subscriptionAccess: filters.subscriptionAccess,
+      limit: 60,
+    }),
+    getPublicCategories(),
+    getSubscriptionPlanLabels(),
+  ]);
+
+  const hasFilters = Boolean(
+    filters.level || filters.categorySlug || filters.subscriptionAccess,
+  );
 
   return (
     <div className="pb-10">
@@ -71,81 +99,106 @@ export default async function CoursesPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl space-y-8 px-4 pt-10">
-      {courses.length === 0 ? (
-        <Card className="border-zinc-800 bg-zinc-900/70">
-          <CardHeader>
-            <CardTitle className="text-zinc-200">暫無課程</CardTitle>
-            <CardDescription className="text-zinc-500">
-              目前尚無公開課程，請稍後再試。
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {courses.map((course) => (
-            <Link key={course.id} href={`/courses/${course.id}`} className="group">
-              <Card className="h-full overflow-hidden border-zinc-800 bg-zinc-900/80 transition-colors hover:border-zinc-600">
-                <div className="relative h-40 bg-zinc-800">
-                  {course.thumbnail_url ? (
-                    <Image
-                      src={course.thumbnail_url}
-                      alt={course.title}
-                      fill
-                      className="object-cover transition-opacity group-hover:opacity-90"
-                      sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <CoursePlaceholderThumbnail title={course.title} />
-                  )}
-                  <span
-                    className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-medium ${LEVEL_COLORS[course.level] ?? 'bg-zinc-700 text-zinc-300'}`}
-                  >
-                    {LEVEL_LABELS[course.level] ?? course.level}
-                  </span>
-                </div>
+      <div className="mx-auto max-w-6xl space-y-6 px-4 pt-10">
+        <Suspense fallback={null}>
+          <CoursesCatalogToolbar
+            categories={categories}
+            filters={filters}
+            resultCount={courses.length}
+            planLabels={planLabels}
+          />
+        </Suspense>
 
-                <CardHeader className="pb-2">
-                  <CardTitle className="line-clamp-2 text-base text-zinc-50 group-hover:text-emerald-400 transition-colors">
-                    {course.title}
-                  </CardTitle>
-                  {course.description && (
-                    <CardDescription className="line-clamp-2 text-zinc-500">
-                      {course.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-
-                <CardContent className="flex flex-col gap-3 pt-0">
-                  {course.teacher && (
-                    <p className="text-xs text-zinc-400">
-                      導師：{course.teacher.display_name}
-                    </p>
-                  )}
-                  <div className="flex items-center gap-4 text-xs text-zinc-500">
-                    <span className="flex items-center gap-1">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      {(course as unknown as { lesson_count?: number }).lesson_count ?? 0} 單元
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3.5 w-3.5" />
-                      {(course as unknown as { student_count?: number }).student_count ?? 0} 學員
-                    </span>
-                    {course.category && (
-                      <Badge variant="outline" className="border-zinc-700 text-zinc-400 text-xs py-0">
-                        {course.category.name}
-                      </Badge>
+        {courses.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {hasFilters ? '沒有符合條件的課程' : '暫無課程'}
+              </CardTitle>
+              <CardDescription>
+                {hasFilters
+                  ? '請調整級數、訂閱權益、類型或排序後再試。'
+                  : '目前尚無公開課程，請稍後再試。'}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {courses.map((course) => (
+              <Link key={course.id} href={`/courses/${course.id}`} className="group">
+                <Card className="h-full overflow-hidden transition-colors hover:border-primary/40">
+                  <div className="relative h-40 bg-muted">
+                    {course.thumbnail_url ? (
+                      <Image
+                        src={course.thumbnail_url}
+                        alt={course.title}
+                        fill
+                        className="object-cover transition-opacity group-hover:opacity-90"
+                        sizes="(max-width:640px) 100vw, (max-width:1024px) 50vw, 33vw"
+                      />
+                    ) : (
+                      <CoursePlaceholderThumbnail title={course.title} />
                     )}
+                    <span
+                      className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-xs font-medium ${LEVEL_COLORS[course.level] ?? 'bg-muted text-muted-foreground'}`}
+                    >
+                      {LEVEL_LABELS[course.level] ?? course.level}
+                    </span>
                   </div>
-                  <p className="text-sm font-semibold text-emerald-400">
-                    {(course as unknown as { is_free?: boolean }).is_free ? '免費' : `HK$ ${Number(course.price).toFixed(0)}`}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      )}
+
+                  <CardHeader className="pb-2">
+                    <CourseSubscriptionBadges
+                      subBasicFree={course.sub_basic_free}
+                      subProFree={course.sub_pro_free}
+                      labels={planLabels}
+                      className="mb-2"
+                    />
+                    <CardTitle className="line-clamp-2 text-base transition-colors group-hover:text-primary">
+                      {course.title}
+                    </CardTitle>
+                    {course.description && (
+                      <CardDescription className="line-clamp-2">
+                        {course.description}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="flex flex-col gap-3 pt-0">
+                    {course.teacher && (
+                      <p className="text-xs text-muted-foreground">
+                        導師：{course.teacher.display_name}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <BookOpen className="h-3.5 w-3.5" />
+                        {course.lesson_count ?? 0} 單元
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3.5 w-3.5" />
+                        {course.student_count ?? 0} 學員
+                      </span>
+                      {course.category && (
+                        <Badge variant="secondary" className="text-xs py-0">
+                          {course.category.name}
+                        </Badge>
+                      )}
+                    </div>
+                    <p
+                      className={`text-sm font-semibold ${
+                        isCoursePurchased(course)
+                          ? 'text-muted-foreground'
+                          : 'text-primary'
+                      }`}
+                    >
+                      {formatCoursePriceLabel(course)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

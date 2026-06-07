@@ -21,7 +21,10 @@ export function HomeBackdropMediaLayers({ media }: { media: HomeBackdropMedia })
 
   const wouldPlayVideo = Boolean(media.videoEnabled && media.videoUrl);
   const imageOn = Boolean(media.imageEnabled && media.imageUrl);
-  const posterUrl = media.imageEnabled && media.imageUrl ? media.imageUrl : undefined;
+  const posterUrl =
+    media.imageEnabled && (media.imageUrl || media.imageUrls[0])
+      ? media.imageUrl ?? media.imageUrls[0]
+      : undefined;
 
   const showVideo = wouldPlayVideo && !preferStaticOnMobileData;
   const youtubeId =

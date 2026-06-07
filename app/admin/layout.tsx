@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, ImageIcon, LayoutDashboard, PencilLine, Shield } from 'lucide-react';
-import { BookCheck } from 'lucide-react';
+import { ArrowLeft, BookCheck, Clapperboard, ImageIcon, LayoutDashboard, PencilLine, Shield } from 'lucide-react';
 
 import { requireAdmin } from '@/lib/admin/auth';
 import { GUEST_HOME_PATH } from '@/lib/site-routes';
@@ -8,6 +7,7 @@ import { GUEST_HOME_PATH } from '@/lib/site-routes';
 const SIDEBAR = [
   { href: '/admin', label: '概覽', icon: LayoutDashboard },
   { href: '/admin/homepage', label: '首頁設定', icon: ImageIcon },
+  { href: '/admin/quiz-videos', label: '英語大冒險影片', icon: Clapperboard },
   { href: '/admin/questions', label: '題庫答案', icon: BookCheck },
   { href: '/admin/questions/editor', label: '題庫複製清單', icon: PencilLine },
 ] as const;

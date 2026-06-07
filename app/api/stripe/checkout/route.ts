@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 
 import { COMMERCE_DEFAULT_CURRENCY } from '@/lib/commerce/constants';
-import { createClient } from '@/lib/supabase/server';
+import { expireStalePendingPurchases } from '@/lib/billing/expire-pending-purchases';
+import { ensureShopPurchaseRecord } from '@/lib/billing/ensure-shop-purchase';
+import { createAdminClient, createClient } from '@/lib/supabase/server';
 import { getCurrentProfile } from '@/lib/supabase/queries';
+import { ensurePaymentMethodDomains } from '@/lib/stripe/ensure-payment-method-domain';
+import {
+  shopCheckoutEmbeddedParams,
+  shopCheckoutHostedParams,
+} from '@/lib/stripe/shop-checkout-session';
 import { getStripeServer } from '@/lib/stripe/server';
 
 type CheckoutReturnTo = 'commerce' | 'games';
@@ -12,6 +19,7 @@ type CheckoutBody =
       kind: 'shop_item';
       shopItemId: string;
       returnTo?: CheckoutReturnTo;
+      embedded?: boolean;
       courseId?: never;
       planCode?: never;
     }
@@ -51,6 +59,7 @@ export async function POST(req: Request) {
     const body = (await req.json()) as CheckoutBody;
     const stripe = getStripeServer();
     const baseUrl = siteUrl();
+    const requestOrigin = req.headers.get('origin') ?? req.headers.get('referer');
 
     if (body.kind === 'shop_item') {
       const { data: item, error } = await supabase
@@ -78,32 +87,70 @@ export async function POST(req: Request) {
               quantity: 1,
             } as const);
 
-      const session = await stripe.checkout.sessions.create({
-        mode: 'payment',
-        line_items: [lineItem],
-        success_url: `${baseUrl}/commerce?success=1`,
-        cancel_url: `${baseUrl}/commerce?canceled=1`,
-        metadata: {
-          kind: 'shop_item',
-          shop_item_id: item.id,
-          user_id: user.id,
-          shop_item_kind: item.kind,
-          stamina_amount: item.stamina_amount ? String(item.stamina_amount) : '',
-        },
-      });
-
-      // record pending purchase (best effort)
-      await supabase.from('user_purchases').insert({
-        user_id: user.id,
+      const returnPath = body.returnTo === 'games' ? '/games' : '/commerce';
+      const metadata = {
         kind: 'shop_item',
         shop_item_id: item.id,
-        stripe_checkout_session_id: session.id,
-        amount_cents: item.price_cents,
-        currency,
-        status: 'pending',
-      } as never);
+        user_id: user.id,
+        shop_item_kind: item.kind,
+        stamina_amount: item.stamina_amount ? String(item.stamina_amount) : '',
+        return_to: body.returnTo === 'games' ? 'games' : 'commerce',
+      };
 
-      return NextResponse.json({ url: session.url });
+      await ensurePaymentMethodDomains(stripe, requestOrigin);
+
+      if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const admin = await createAdminClient();
+        await expireStalePendingPurchases(admin, { userId: user.id });
+      }
+
+      const returnUrl = `${baseUrl}${returnPath}?checkout=success&session_id={CHECKOUT_SESSION_ID}&shop_kind=${encodeURIComponent(item.kind)}`;
+      const cancelUrl = `${baseUrl}${returnPath}?checkout=canceled`;
+
+      if (body.embedded) {
+        const session = await stripe.checkout.sessions.create(
+          shopCheckoutEmbeddedParams(lineItem, metadata, returnUrl),
+        );
+
+        if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          const admin = await createAdminClient();
+          await ensureShopPurchaseRecord(admin, {
+            userId: user.id,
+            shopItemId: item.id,
+            stripeCheckoutSessionId: session.id,
+            amountCents: item.price_cents,
+            currency,
+            status: 'pending',
+          });
+        }
+
+        if (!session.client_secret) {
+          return NextResponse.json({ error: '無法建立嵌入式付款' }, { status: 500 });
+        }
+
+        return NextResponse.json({
+          clientSecret: session.client_secret,
+          sessionId: session.id,
+        });
+      }
+
+      const session = await stripe.checkout.sessions.create(
+        shopCheckoutHostedParams(lineItem, metadata, returnUrl, cancelUrl),
+      );
+
+      if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const admin = await createAdminClient();
+        await ensureShopPurchaseRecord(admin, {
+          userId: user.id,
+          shopItemId: item.id,
+          stripeCheckoutSessionId: session.id,
+          amountCents: item.price_cents,
+          currency,
+          status: 'pending',
+        });
+      }
+
+      return NextResponse.json({ url: session.url, sessionId: session.id });
     }
 
     if (body.kind === 'subscription') {
@@ -157,12 +204,89 @@ export async function POST(req: Request) {
       return NextResponse.json({ url: session.url });
     }
 
-    // kind === 'course' (existing enroll button)
-    // We keep this route but return a clear error until course pricing is wired.
-    return NextResponse.json(
-      { error: 'COURSE_CHECKOUT_NOT_IMPLEMENTED' },
-      { status: 400 },
-    );
+    const courseId =
+      body.kind === 'course'
+        ? body.courseId?.trim()
+        : 'courseId' in body && typeof (body as { courseId?: string }).courseId === 'string'
+          ? (body as { courseId: string }).courseId.trim()
+          : '';
+
+    if (!courseId) {
+      return NextResponse.json({ error: 'Missing courseId' }, { status: 400 });
+    }
+
+    const { data: course, error: courseErr } = await supabase
+      .from('courses')
+      .select('id, title, description, price, is_free, is_published')
+      .eq('id', courseId)
+      .maybeSingle();
+
+    if (courseErr || !course) {
+      return NextResponse.json(
+        { error: courseErr?.message ?? 'Course not found' },
+        { status: 400 },
+      );
+    }
+
+    if (!course.is_published) {
+      return NextResponse.json({ error: '課程尚未上架' }, { status: 400 });
+    }
+
+    if (course.is_free) {
+      return NextResponse.json({ error: '此課程為免費，請直接報名' }, { status: 400 });
+    }
+
+    const priceNum = Number(course.price);
+    const amountCents = Math.round(priceNum * 100);
+    if (!Number.isFinite(priceNum) || amountCents <= 0) {
+      return NextResponse.json({ error: '課程尚未設定價格' }, { status: 400 });
+    }
+
+    const { data: enrolled } = await supabase
+      .from('enrollments')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('course_id', courseId)
+      .maybeSingle();
+
+    if (enrolled?.id) {
+      return NextResponse.json({ error: '您已報名此課程' }, { status: 400 });
+    }
+
+    const currency = COMMERCE_DEFAULT_CURRENCY;
+    const lineItem = {
+      price_data: {
+        currency,
+        unit_amount: amountCents,
+        product_data: {
+          name: course.title,
+          description: course.description || undefined,
+        },
+      },
+      quantity: 1,
+    } as const;
+
+    const metadata = {
+      kind: 'course',
+      course_id: courseId,
+      user_id: user.id,
+    };
+
+    await ensurePaymentMethodDomains(stripe, requestOrigin);
+
+    const successUrl = `${baseUrl}/courses/${courseId}?checkout=success&session_id={CHECKOUT_SESSION_ID}`;
+    const cancelUrl = `${baseUrl}/courses/${courseId}?checkout=canceled`;
+
+    const session = await stripe.checkout.sessions.create({
+      ...shopCheckoutHostedParams(lineItem, metadata, successUrl, cancelUrl),
+      customer_email: user.email ?? undefined,
+    });
+
+    if (!session.url) {
+      return NextResponse.json({ error: '無法建立付款連結' }, { status: 500 });
+    }
+
+    return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (e) {
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Stripe error' },

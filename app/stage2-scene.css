@@ -1,0 +1,246 @@
+/* Stage 2 共用場景背景（遊戲 / 開場 / 結算） */
+
+/* 與 Stage 1 一致：禁止長按選字、系統 tap highlight */
+.stage2-root,
+.stage2-scene-shell {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+.stage2-root,
+.stage2-scene-shell,
+.stage2-root *:not(input):not(textarea),
+.stage2-scene-shell *:not(input):not(textarea) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.stage2-root *::selection,
+.stage2-root *::-moz-selection,
+.stage2-scene-shell *::selection,
+.stage2-scene-shell *::-moz-selection {
+  background: transparent !important;
+  color: inherit;
+}
+
+.stage2-scene-shell {
+  position: relative;
+  --stage2-floor-bg: #1a1028;
+  --stage2-hero-h: clamp(173px, 40vw, 232px);
+  --stage2-bg-floor-bottom: var(--stage2-hero-h);
+  background: var(--stage2-floor-bg);
+  overflow: hidden;
+}
+
+.stage2-scene-shell--shuffle-extreme {
+  overflow: visible;
+}
+
+.stage2-scene-bg {
+  position: absolute;
+  inset: 0 0 var(--stage2-bg-floor-bottom) 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to top,
+      var(--stage2-floor-bg) 0%,
+      color-mix(in srgb, var(--stage2-floor-bg) 78%, transparent) 18%,
+      color-mix(in srgb, var(--stage2-floor-bg) 42%, transparent) 40%,
+      color-mix(in srgb, var(--stage2-floor-bg) 12%, transparent) 62%,
+      transparent 82%
+    ),
+    url('/games/stage2/castle-bg.png');
+  background-size: cover, cover;
+  background-position: center bottom, center bottom;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* 和室光影：蓮燈暖光、地面紫霧（疊在背景上、UI 下） */
+.stage2-scene-lights {
+  position: absolute;
+  inset: 0 0 var(--stage2-bg-floor-bottom) 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.stage2-scene-lights__wash {
+  position: absolute;
+  inset: -18%;
+  background:
+    radial-gradient(ellipse 28% 22% at 18% 28%, rgba(251, 191, 36, 0.14) 0%, transparent 62%),
+    radial-gradient(ellipse 26% 20% at 82% 26%, rgba(244, 114, 182, 0.12) 0%, transparent 60%);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+  animation: stage2-scene-wash-drift 8.5s ease-in-out infinite alternate;
+}
+
+.stage2-scene-lights__lanterns {
+  position: absolute;
+  inset: 0;
+}
+
+.stage2-scene-lights__lantern {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  animation: stage2-scene-lantern-flicker 3.6s ease-in-out infinite;
+}
+
+.stage2-scene-lights__lantern--left {
+  width: min(22%, 160px);
+  height: min(16%, 115px);
+  top: 18%;
+  left: 14%;
+  background: radial-gradient(
+    ellipse 90% 80% at 50% 45%,
+    rgba(251, 207, 232, 0.32) 0%,
+    rgba(251, 191, 36, 0.18) 46%,
+    transparent 74%
+  );
+}
+
+.stage2-scene-lights__lantern--right {
+  width: min(20%, 150px);
+  height: min(15%, 105px);
+  top: 19%;
+  right: 15%;
+  background: radial-gradient(
+    ellipse 90% 80% at 50% 45%,
+    rgba(253, 186, 116, 0.3) 0%,
+    rgba(244, 114, 182, 0.16) 48%,
+    transparent 72%
+  );
+  animation-delay: -1.4s;
+}
+
+.stage2-scene-lights__mist {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44%;
+  background: linear-gradient(
+    to top,
+    rgba(88, 28, 135, 0.52) 0%,
+    rgba(109, 40, 217, 0.26) 38%,
+    transparent 100%
+  );
+  opacity: 0.72;
+  /* 底部邊界淡出，避免紫霧與主角區底色 (#1a1028) 接縫色差 */
+  mask-image: linear-gradient(to top, transparent 0%, rgb(0 0 0 / 0.4) 12%, #000 28%, #000 100%);
+  animation: stage2-scene-mist-drift 11s ease-in-out infinite alternate;
+}
+
+.stage2-scene-lights__vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 10, 24, 0.38) 0%,
+    transparent 24%,
+    transparent 58%,
+    var(--stage2-floor-bg) 100%
+  );
+  box-shadow: inset 0 0 110px 36px rgba(26, 16, 40, 0.62);
+}
+
+.stage2-scene-lights__sparkles {
+  position: absolute;
+  inset: 0;
+  opacity: 0.32;
+  background-image:
+    radial-gradient(circle at 14% 36% 1px, rgba(251, 191, 36, 0.55) 0%, transparent 100%),
+    radial-gradient(circle at 19% 41% 0.8px, rgba(255, 255, 255, 0.4) 0%, transparent 100%),
+    radial-gradient(circle at 24% 33% 1px, rgba(251, 207, 232, 0.45) 0%, transparent 100%),
+    radial-gradient(circle at 78% 38% 1px, rgba(251, 191, 36, 0.5) 0%, transparent 100%),
+    radial-gradient(circle at 83% 43% 0.8px, rgba(255, 255, 255, 0.38) 0%, transparent 100%),
+    radial-gradient(circle at 88% 35% 1px, rgba(253, 186, 116, 0.42) 0%, transparent 100%);
+  animation: stage2-scene-sparkle-twinkle 4.2s ease-in-out infinite alternate;
+}
+
+@keyframes stage2-scene-lantern-flicker {
+  0%,
+  100% {
+    opacity: 0.62;
+    filter: blur(28px) brightness(1);
+  }
+  35% {
+    opacity: 0.78;
+    filter: blur(26px) brightness(1.06);
+  }
+  62% {
+    opacity: 0.55;
+    filter: blur(30px) brightness(0.96);
+  }
+}
+
+@keyframes stage2-scene-wash-drift {
+  0% {
+    transform: translate3d(-1.5%, 0.5%, 0) scale(1);
+    opacity: 0.48;
+  }
+  100% {
+    transform: translate3d(1.5%, -0.5%, 0) scale(1.02);
+    opacity: 0.58;
+  }
+}
+
+@keyframes stage2-scene-mist-drift {
+  0% {
+    transform: translate3d(-2%, 0, 0);
+    opacity: 0.62;
+  }
+  100% {
+    transform: translate3d(2%, 0, 0);
+    opacity: 0.78;
+  }
+}
+
+@keyframes stage2-scene-sparkle-twinkle {
+  0% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0.38;
+  }
+}
+
+.stage2-scene-shell--on-beat .stage2-scene-lights__wash {
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.85);
+  filter: brightness(1.08);
+}
+
+.stage2-scene-shell--on-beat .stage2-scene-lights__lantern {
+  filter: brightness(1.12);
+}
+
+.stage2-scene-shell--on-beat .stage2-scene-lights__sparkles {
+  opacity: 0.42;
+}
+
+.stage2-scene-shell--shuffle-extreme .stage2-scene-lights__wash {
+  filter: brightness(1.22) saturate(1.18) hue-rotate(-8deg);
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.65);
+}
+
+.stage2-scene-shell--shuffle-extreme .stage2-scene-lights__lantern {
+  filter: brightness(1.28) drop-shadow(0 0 10px rgba(250, 204, 21, 0.4));
+}
+
+.stage2-scene-shell--shuffle-extreme .stage2-scene-lights__sparkles {
+  opacity: 0.52;
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage2-scene-lights__wash,
+  .stage2-scene-lights__lantern,
+  .stage2-scene-lights__mist,
+  .stage2-scene-lights__sparkles {
+    animation: none !important;
+  }
+}

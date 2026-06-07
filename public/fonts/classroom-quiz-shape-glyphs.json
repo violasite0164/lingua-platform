@@ -1,0 +1,35 @@
+{
+  "glyphs": {
+    "O": {
+      "ha": 800,
+      "x_min": 80,
+      "x_max": 720,
+      "o": "m 400 72 l 400 72 q 628 72 696 280 q 728 400 728 400 q 728 520 696 628 q 628 728 400 728 l 400 728 q 172 728 104 520 q 72 400 72 400 q 72 280 104 172 q 172 72 400 72 z m 400 200 l 400 200 q 260 200 220 320 q 200 400 200 400 q 200 480 220 560 q 260 600 400 600 l 400 600 q 540 600 580 480 q 600 400 600 400 q 600 320 580 240 q 540 200 400 200 z"
+    },
+    "T": {
+      "ha": 800,
+      "x_min": 60,
+      "x_max": 740,
+      "o": "m 120 640 l 680 640 l 680 520 l 460 520 l 460 120 l 340 120 l 340 520 l 120 520 l 120 640 z"
+    },
+    "?": {
+      "ha": 800,
+      "x_min": 80,
+      "x_max": 720,
+      "o": "m 400 72 l 400 72 q 628 72 696 280 q 728 400 728 400 q 728 520 696 628 q 628 728 400 728 l 400 728 q 172 728 104 520 q 72 400 72 400 q 72 280 104 172 q 172 72 400 72 z m 400 200 l 400 200 q 260 200 220 320 q 200 400 200 400 q 200 480 220 560 q 260 600 400 600 l 400 600 q 540 600 580 480 q 600 400 600 400 q 600 320 580 240 q 540 200 400 200 z"
+    }
+  },
+  "familyName": "ClassroomQuizShapes",
+  "ascender": 800,
+  "descender": -120,
+  "underlinePosition": -100,
+  "underlineThickness": 40,
+  "boundingBox": { "yMin": -120, "xMin": 0, "yMax": 800, "xMax": 800 },
+  "resolution": 1000,
+  "original_font_information": {
+    "format": 0,
+    "copyright": "Lingua Platform built-in shape glyphs"
+  },
+  "cssFontWeight": "normal",
+  "cssFontStyle": "normal"
+}

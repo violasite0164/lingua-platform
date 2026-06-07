@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,9 +9,14 @@ import {
   BookOpen, Clock, GraduationCap, Star, Users, Zap,
 } from 'lucide-react';
 
+import { getSubscriptionPlanLabels } from '@/lib/billing/queries';
 import { getCourseWithLessons } from '@/lib/supabase/queries';
+import { canWatchLessonVideo } from '@/lib/billing/subscription-access';
+import { hasAnySubscriptionWatchAccess } from '@/lib/course-quiz/access';
+import { CourseSubscriptionBadges } from '@/components/courses/course-subscription-badges';
 import { VideoPlayer } from '@/components/courses/video-player';
 import { LessonList } from '@/components/courses/lesson-list';
+import { CourseCheckoutSuccess } from '@/components/courses/course-checkout-success';
 import { EnrollButton } from '@/components/courses/enroll-button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +24,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { formatDuration, formatPrice, calcCompletionRate } from '@/lib/utils';
+import { formatDuration, formatCoursePriceLabel, isCoursePurchased, calcCompletionRate } from '@/lib/utils';
+import { getMentorSpecialtyLabel } from '@/lib/mentor-specialty';
 
 const LEVEL_LABELS: Record<string, string> = {
-  beginner:     '初級',
-  intermediate: '中級',
-  advanced:     '進階',
+  beginner:     '幼兒',
+  intermediate: '小學',
+  advanced:     '中學',
 };
 
 // ─── Metadata ─────────────────────────────────────────────
@@ -54,15 +61,17 @@ export default async function CourseDetailPage({
 }) {
   const { id } = await params;
 
-  let course: Awaited<ReturnType<typeof getCourseWithLessons>> = null;
-  try {
-    course = await getCourseWithLessons(id);
-  } catch {
-    notFound();
-  }
+  const [courseResult, planLabels] = await Promise.all([
+    getCourseWithLessons(id).catch(() => null),
+    getSubscriptionPlanLabels(),
+  ]);
+  const course = courseResult;
   if (!course) notFound();
 
-  const { lessons, teacher, is_enrolled } = course;
+  const { lessons, quizzes, teacher, is_enrolled } = course;
+  const subscriptionTier = course.subscription_tier ?? 'free';
+  const hasSubscriptionAccess =
+    !is_enrolled && hasAnySubscriptionWatchAccess(course);
 
   // 計算課程總時長
   const totalSeconds = lessons.reduce((s, l) => s + l.duration_sec, 0);
@@ -78,9 +87,15 @@ export default async function CourseDetailPage({
 
   // 預覽影片：找第一個 is_preview 的課堂，或第一堂
   const previewLesson = lessons.find((l) => l.is_preview) ?? lessons[0] ?? null;
+  const previewUnlocked =
+    previewLesson != null &&
+    canWatchLessonVideo(previewLesson, course, subscriptionTier);
 
   return (
     <div className="min-h-screen bg-background">
+      <Suspense fallback={null}>
+        <CourseCheckoutSuccess />
+      </Suspense>
       {/* ── Hero section ─────────────────────────────────── */}
       <section className="bg-muted/40 border-b">
         <div className="container mx-auto px-4 py-8 lg:py-12">
@@ -91,7 +106,7 @@ export default async function CourseDetailPage({
               {/* Video player */}
               <VideoPlayer
                 videoUid={previewLesson?.cf_video_uid ?? null}
-                locked={!is_enrolled && !previewLesson?.is_preview}
+                locked={!previewUnlocked}
               />
 
               {/* Title & badges */}
@@ -104,6 +119,12 @@ export default async function CourseDetailPage({
                     {LEVEL_LABELS[course.level] ?? course.level}
                   </Badge>
                   {course.is_free && <Badge variant="xp">免費</Badge>}
+                  <CourseSubscriptionBadges
+                    subBasicFree={course.sub_basic_free}
+                    subProFree={course.sub_pro_free}
+                    labels={planLabels}
+                    size="md"
+                  />
                 </div>
 
                 <h1 className="text-2xl lg:text-3xl font-bold leading-tight">
@@ -157,9 +178,18 @@ export default async function CourseDetailPage({
             <div className="lg:col-span-2">
               <Card className="sticky top-20">
                 <CardHeader className="pb-4">
-                  {/* Price */}
-                  <div className="text-3xl font-bold">
-                    {formatPrice(course.price)}
+                  <div
+                    className={`text-3xl font-bold ${
+                      isCoursePurchased({ is_enrolled, is_free: course.is_free })
+                        ? 'text-muted-foreground'
+                        : ''
+                    }`}
+                  >
+                    {formatCoursePriceLabel({
+                      is_enrolled,
+                      is_free: course.is_free,
+                      price: course.price,
+                    })}
                   </div>
                 </CardHeader>
 
@@ -187,10 +217,24 @@ export default async function CourseDetailPage({
                     price={course.price}
                     isFree={course.is_free}
                     isEnrolled={is_enrolled}
+                    hasSubscriptionAccess={hasSubscriptionAccess}
                     nextLessonId={nextLesson?.id}
                   />
 
-                  <Separator />
+                  {(course.sub_basic_free || course.sub_pro_free) && (
+                    <div className="space-y-2 rounded-lg border border-border/80 bg-muted/30 p-3">
+                      <p className="text-sm font-medium">訂閱權益</p>
+                      <CourseSubscriptionBadges
+                        subBasicFree={course.sub_basic_free}
+                        subProFree={course.sub_pro_free}
+                        labels={planLabels}
+                        size="md"
+                      />
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        持有對應有效訂閱的會員可免費觀看本課程，無需另外購買。
+                      </p>
+                    </div>
+                  )}
 
                   {/* Course includes */}
                   <div className="space-y-2">
@@ -251,7 +295,8 @@ export default async function CourseDetailPage({
               <LessonList
                 courseId={course.id}
                 lessons={lessons}
-                isEnrolled={is_enrolled}
+                quizzes={quizzes}
+                course={course}
               />
             </div>
           </TabsContent>
@@ -271,16 +316,31 @@ export default async function CourseDetailPage({
 
           {/* ── Teacher tab ── */}
           <TabsContent value="teacher">
-            <div className="max-w-xl flex items-start gap-4">
+            <div className="max-w-2xl flex items-start gap-4">
               <Avatar className="h-16 w-16 shrink-0">
                 <AvatarImage src={teacher.avatar_url ?? undefined} />
                 <AvatarFallback>
                   {teacher.display_name.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h3 className="text-lg font-semibold">{teacher.display_name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">語言教師</p>
+              <div className="min-w-0 flex-1 space-y-2">
+                <div>
+                  <h3 className="text-lg font-semibold">{teacher.display_name}</h3>
+                  {getMentorSpecialtyLabel(teacher.mentor_specialty) && (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {getMentorSpecialtyLabel(teacher.mentor_specialty)}
+                    </p>
+                  )}
+                </div>
+                {teacher.bio?.trim() ? (
+                  <p className="text-sm text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                    {teacher.bio.trim()}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    講師尚未填寫介紹。
+                  </p>
+                )}
               </div>
             </div>
           </TabsContent>

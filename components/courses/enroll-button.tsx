@@ -12,6 +12,8 @@ interface EnrollButtonProps {
   price: number;
   isFree: boolean;
   isEnrolled: boolean;
+  /** 有效訂閱且本課程有訂閱免費內容（不需購買即可學習） */
+  hasSubscriptionAccess?: boolean;
   nextLessonId?: string;
 }
 
@@ -20,6 +22,7 @@ export function EnrollButton({
   price,
   isFree,
   isEnrolled,
+  hasSubscriptionAccess = false,
   nextLessonId,
 }: EnrollButtonProps) {
   const router = useRouter();
@@ -40,6 +43,19 @@ export function EnrollButton({
         }
       >
         繼續學習
+      </Button>
+    );
+  }
+
+  // 訂閱權益可觀看 → 「開始學習」
+  if (hasSubscriptionAccess) {
+    return (
+      <Button
+        size="lg"
+        className="w-full"
+        onClick={() => router.push(`/learn/${courseId}`)}
+      >
+        開始學習
       </Button>
     );
   }
@@ -69,10 +85,16 @@ export function EnrollButton({
       const res = await fetch('/api/stripe/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ courseId }),
+        body: JSON.stringify({ kind: 'course', courseId }),
       });
       const { url, error } = await res.json() as { url?: string; error?: string };
-      if (error || !url) throw new Error(error ?? 'Stripe 錯誤');
+      if (error || !url) {
+        const msg =
+          error === '您已報名此課程'
+            ? error
+            : error ?? 'Stripe 錯誤';
+        throw new Error(msg);
+      }
       window.location.href = url;
     } catch (err) {
       console.error(err);

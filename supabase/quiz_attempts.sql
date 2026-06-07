@@ -1,5 +1,5 @@
 -- ============================================================
--- AI英語鬥：每局紀錄 + 排行榜用彙總 View
+-- 英語大冒險：每局紀錄 + 排行榜用彙總 View
 -- 執行順序：須在 profiles、questions 存在後執行
 -- ============================================================
 
@@ -20,7 +20,7 @@ create table if not exists public.quiz_attempts (
   check (correct_count >= 0 and correct_count <= total_questions)
 );
 
-comment on table public.quiz_attempts is 'AI英語鬥每局成績（供排行榜：平均得分、滿分次數、平均每局作答時間等）';
+comment on table public.quiz_attempts is '英語大冒險每局成績（供排行榜：平均得分、滿分次數、平均每局作答時間等）';
 
 create index if not exists idx_quiz_attempts_user on public.quiz_attempts(user_id);
 create index if not exists idx_quiz_attempts_diff on public.quiz_attempts(difficulty);
@@ -51,6 +51,6 @@ select
 from public.quiz_attempts qa
 group by qa.user_id, qa.difficulty;
 
-comment on view public.quiz_user_stats is 'AI英語鬥：各難度每人平均得分、滿分次數、作答秒數（用於推導平均每局作答時間）、場次（排行榜排序規則見應用程式：滿分場次優先，同場次則時間60%+得分40%）';
+comment on view public.quiz_user_stats is '英語大冒險：各難度每人平均得分、滿分次數、作答秒數（用於推導平均每局作答時間）、場次（排行榜排序規則見應用程式：滿分場次優先，同場次則時間60%+得分40%）';
 
 -- View 使用 underlying table 的 RLS；quiz_attempts 已允許 select

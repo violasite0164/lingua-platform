@@ -1,0 +1,2113 @@
+/* Stage 2 — 分身術 RPG 戰鬥介面 */
+
+@import './stage2-scene.css';
+
+.stage2-root {
+  position: relative;
+  width: 100%;
+  min-height: min(100%, 720px);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--stage2-floor-bg, #1a1028);
+}
+
+.stage2-root--embedded {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+}
+
+.stage2-root--error {
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #fecaca;
+  text-align: center;
+}
+
+.stage2-rpg-frame {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: inherit;
+  --stage2-shuriken-fly-ms: 280ms;
+  --stage2-ninja-w: clamp(138px, 32vw, 182px);
+  --stage2-ninja-h: clamp(173px, 40vw, 228px);
+  --stage2-ninja-feet-offset: 1.5rem;
+  --stage2-word-slot: clamp(2.35rem, 6vw, 3.1rem);
+  --stage2-clone-total-h: calc(var(--stage2-ninja-h) + var(--stage2-word-slot));
+  --stage2-heroes-reserve: calc(var(--stage2-hero-h) + var(--stage2-ninja-feet-offset));
+}
+
+.stage2-rpg-enemy-panel {
+  position: relative;
+  z-index: 3;
+  flex: 1;
+  min-height: 280px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.stage2-scene-shell--shuffle-extreme .stage2-rpg-enemy-panel {
+  overflow: visible;
+}
+
+.stage2-rpg-heroes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(2.1rem, 9.2vw, 3.4rem);
+  padding: 0 0.5rem 0;
+  line-height: 0;
+  pointer-events: none;
+}
+
+.stage2-round-badge.quiz-status-stroke-text {
+  position: absolute;
+  top: 0.45rem;
+  left: 0.65rem;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: clamp(1.45rem, 5.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  opacity: 0.92;
+}
+
+.stage2-hearts {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.55rem;
+  bottom: auto;
+  left: auto;
+  z-index: 5;
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(0.35rem, 1.6vw, 0.55rem);
+  pointer-events: none;
+}
+
+.stage2-heart {
+  font-size: clamp(3.35rem, 11.5vw, 5.1rem);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.28);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.stage2-heart--full {
+  color: rgba(248, 113, 113, 0.9);
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.45),
+    0 0 10px rgba(248, 113, 113, 0.35);
+}
+
+.stage2-heart--critical {
+  animation: stage2-heart-critical-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes stage2-heart-critical-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.08);
+    filter: brightness(1.25);
+  }
+}
+
+/* 僅剩 1 顆心：全畫面紅色殘血閃爍 */
+.stage2-low-health-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 120% 95% at 50% 45%,
+      transparent 28%,
+      rgba(220, 38, 38, 0.12) 52%,
+      rgba(153, 27, 27, 0.42) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(127, 29, 29, 0.22) 0%,
+      rgba(69, 10, 10, 0.08) 38%,
+      rgba(127, 29, 29, 0.28) 100%
+    );
+  box-shadow: inset 0 0 72px rgba(220, 38, 38, 0.35);
+  animation: stage2-low-health-flash 1.1s ease-in-out infinite;
+}
+
+@keyframes stage2-low-health-flash {
+  0%,
+  100% {
+    opacity: 0.32;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+.stage2-root--low-health .stage2-rpg-enemy-panel {
+  animation: stage2-low-health-shake 1.1s ease-in-out infinite;
+}
+
+@keyframes stage2-low-health-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-1px, 0.5px);
+  }
+  75% {
+    transform: translate(1px, -0.5px);
+  }
+}
+
+.stage2-status-text,
+.stage2-hint {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  margin: 0;
+  padding: 0.45rem 1.15rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fef9c3;
+  font-size: clamp(1.15rem, 3.8vw, 1.45rem);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.stage2-ninja-stage {
+  position: absolute;
+  top: 14%;
+  left: 1.5%;
+  right: 1.5%;
+  bottom: var(--stage2-heroes-reserve);
+  z-index: 2;
+  overflow: visible;
+}
+
+/* 5／7 分身局：全幅旋轉光暈（裁切邊緣，避免全螢幕看到光尾） */
+.stage2-scene-shell--round-power {
+  overflow: hidden;
+}
+
+.stage2-scene-shell--shuffle-extreme {
+  overflow: hidden;
+}
+
+.stage2-scene-shell > .stage2-round-power-aura {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.stage2-round-power-aura__bloom,
+.stage2-round-power-aura__spin {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 320vmax;
+  height: 320vmax;
+  margin: 0;
+  border-radius: 50%;
+  clip-path: circle(50% at 50% 50%);
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+}
+
+/* 7 分身局：光暈再放大、柔化邊緣，避免旋轉時露出方角 */
+.stage2-round-power-aura--extreme .stage2-round-power-aura__bloom,
+.stage2-round-power-aura--extreme .stage2-round-power-aura__spin {
+  width: min(520vmax, 2400px);
+  height: min(520vmax, 2400px);
+}
+
+.stage2-round-power-aura--extreme .stage2-round-power-aura__bloom {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(244, 114, 182, 0.34) 0%,
+    rgba(192, 132, 252, 0.26) 32%,
+    rgba(168, 85, 247, 0.14) 52%,
+    rgba(88, 28, 135, 0.07) 72%,
+    transparent 94%
+  );
+  filter: blur(42px);
+  animation: stage2-round-power-bloom-extreme
+    calc(var(--stage2-beat-ms, 545ms) * 0.42) ease-in-out infinite alternate;
+}
+
+.stage2-round-power-aura--extreme .stage2-round-power-aura__spin {
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 50%,
+    #000 0%,
+    #000 12%,
+    rgba(0, 0, 0, 0.88) 45%,
+    rgba(0, 0, 0, 0.5) 78%,
+    transparent 98%
+  );
+  mask-image: radial-gradient(
+    circle at 50% 50%,
+    #000 0%,
+    #000 12%,
+    rgba(0, 0, 0, 0.88) 45%,
+    rgba(0, 0, 0, 0.5) 78%,
+    transparent 98%
+  );
+  filter: blur(80px);
+  opacity: 0.94;
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 1.15);
+}
+
+.stage2-round-power-aura__bloom {
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(244, 114, 182, 0.28) 0%,
+    rgba(192, 132, 252, 0.22) 28%,
+    rgba(168, 85, 247, 0.12) 48%,
+    rgba(88, 28, 135, 0.06) 68%,
+    transparent 88%
+  );
+  filter: blur(28px);
+  animation: stage2-round-power-bloom
+    calc(var(--stage2-beat-ms, 545ms) * 0.45) ease-in-out infinite alternate;
+}
+
+.stage2-round-power-aura__spin {
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(244, 114, 182, 0.12) 20deg,
+    rgba(244, 114, 182, 0.5) 65deg,
+    rgba(192, 132, 252, 0.52) 130deg,
+    rgba(168, 85, 247, 0.3) 200deg,
+    rgba(250, 204, 21, 0.38) 275deg,
+    rgba(244, 114, 182, 0.18) 330deg,
+    transparent 360deg
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 50%,
+    #000 0%,
+    #000 18%,
+    rgba(0, 0, 0, 0.75) 50%,
+    rgba(0, 0, 0, 0.35) 72%,
+    transparent 92%
+  );
+  mask-image: radial-gradient(
+    circle at 50% 50%,
+    #000 0%,
+    #000 18%,
+    rgba(0, 0, 0, 0.75) 50%,
+    rgba(0, 0, 0, 0.35) 72%,
+    transparent 92%
+  );
+  filter: blur(48px);
+  opacity: 0.88;
+  mix-blend-mode: screen;
+  animation: stage2-round-power-spin
+    calc(var(--stage2-beat-ms, 545ms) * 1.4) linear infinite;
+}
+
+/* 第 8-10 回最終階段氛圍（無旋轉炫光版本） */
+.stage2-scene-shell--final-phase .stage2-round-badge.quiz-status-stroke-text {
+  text-shadow: 0 0 10px rgba(251, 191, 36, 0.35);
+}
+
+.stage2-scene-shell--final-phase .stage2-round-timer.quiz-status-stroke-text {
+  text-shadow:
+    2px 2px 0 rgba(26, 26, 46, 0.72),
+    -1px 1px 0 rgba(26, 26, 46, 0.72),
+    1px -1px 0 rgba(26, 26, 46, 0.72),
+    0 0 12px rgba(250, 204, 21, 0.35);
+}
+
+.stage2-final-phase-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.stage2-scene-shell--final-phase-1 .stage2-final-phase-overlay {
+  background:
+    radial-gradient(
+      ellipse 96% 82% at 50% 44%,
+      rgba(192, 132, 252, 0.2) 0%,
+      rgba(168, 85, 247, 0.08) 46%,
+      rgba(88, 28, 135, 0.04) 72%,
+      transparent 100%
+    ),
+    linear-gradient(180deg, rgba(88, 28, 135, 0.18) 0%, rgba(15, 10, 28, 0) 64%);
+  animation: stage2-final-phase-pulse-1 calc(var(--stage2-beat-ms, 545ms) * 1.8) ease-in-out
+    infinite;
+}
+
+.stage2-scene-shell--final-phase-2 .stage2-final-phase-overlay {
+  background:
+    radial-gradient(
+      ellipse 102% 86% at 50% 43%,
+      rgba(244, 114, 182, 0.2) 0%,
+      rgba(192, 132, 252, 0.1) 44%,
+      rgba(88, 28, 135, 0.06) 72%,
+      transparent 100%
+    ),
+    linear-gradient(180deg, rgba(159, 18, 57, 0.16) 0%, rgba(15, 10, 28, 0) 64%);
+  animation: stage2-final-phase-pulse-2 calc(var(--stage2-beat-ms, 545ms) * 1.45) ease-in-out
+    infinite;
+}
+
+.stage2-scene-shell--final-phase-3 .stage2-final-phase-overlay {
+  background:
+    radial-gradient(
+      ellipse 108% 92% at 50% 42%,
+      rgba(250, 204, 21, 0.16) 0%,
+      rgba(244, 114, 182, 0.14) 34%,
+      rgba(192, 132, 252, 0.1) 58%,
+      rgba(88, 28, 135, 0.08) 78%,
+      transparent 100%
+    ),
+    linear-gradient(180deg, rgba(113, 63, 18, 0.18) 0%, rgba(15, 10, 28, 0) 64%);
+  animation: stage2-final-phase-pulse-3 calc(var(--stage2-beat-ms, 545ms) * 1.2) ease-in-out
+    infinite;
+}
+
+@keyframes stage2-final-phase-pulse-1 {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0.95;
+  }
+}
+
+@keyframes stage2-final-phase-pulse-2 {
+  from {
+    opacity: 0.58;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stage2-final-phase-pulse-3 {
+  from {
+    opacity: 0.62;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.stage2-boss-callout,
+.stage2-clone-field,
+.stage2-round-timer {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes stage2-round-power-bloom {
+  from {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+}
+
+@keyframes stage2-round-power-bloom-extreme {
+  from {
+    opacity: 0.78;
+    transform: translate(-50%, -50%) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+}
+
+@keyframes stage2-round-power-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* MISS 說明顯示時，避免分身區攔截長按 */
+.stage2-ninja-stage--has-feedback .stage2-clone-field {
+  pointer-events: none;
+}
+
+.stage2-jutsu-intro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 2;
+  padding-bottom: var(--stage2-ninja-feet-offset);
+  box-sizing: border-box;
+}
+
+.stage2-jutsu-intro--idle {
+  pointer-events: none;
+}
+
+.stage2-jutsu-caster-body {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  line-height: 0;
+}
+
+.stage2-jutsu-caster-body--fading {
+  pointer-events: none;
+  animation: stage2-jutsu-caster-fade var(--stage2-cast-fade-ms, 480ms) ease forwards;
+}
+
+@keyframes stage2-jutsu-caster-fade {
+  from {
+    opacity: 1;
+    visibility: visible;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* 施術忍者消失：由結印手位置向外擴散的紫白閃光（半邊高光） */
+.stage2-jutsu-vanish-flash {
+  --stage2-vanish-flash-x: 56%;
+  position: absolute;
+  left: var(--stage2-vanish-flash-x);
+  bottom: calc(var(--stage2-ninja-h) * 0.41);
+  z-index: 2;
+  width: min(10rem, 48vw);
+  height: min(10rem, 48vw);
+  pointer-events: none;
+  border-radius: 50%;
+  transform: translate(-50%, 42%);
+  transform-origin: 42% 58%;
+  background: radial-gradient(
+    ellipse 92% 88% at 42% 48%,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(253, 244, 255, 0.78) 18%,
+    rgba(216, 180, 254, 0.48) 36%,
+    rgba(168, 85, 247, 0.22) 54%,
+    rgba(124, 58, 237, 0.06) 70%,
+    transparent 80%
+  );
+  mix-blend-mode: screen;
+  animation: stage2-jutsu-vanish-flash 0.62s ease-out forwards;
+}
+
+/* 半邊明：結印手一側更亮，另一側較暗 */
+.stage2-jutsu-vanish-flash::before {
+  content: '';
+  position: absolute;
+  inset: -6%;
+  border-radius: 50%;
+  background: linear-gradient(
+    112deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(255, 250, 255, 0.82) 34%,
+    rgba(255, 255, 255, 0.08) 49.5%,
+    rgba(255, 255, 255, 0) 50.5%,
+    rgba(186, 130, 255, 0.12) 68%,
+    rgba(124, 58, 237, 0.04) 100%
+  );
+  -webkit-mask-image: linear-gradient(108deg, #000 0%, #000 49%, transparent 51%, transparent 100%);
+  mask-image: linear-gradient(108deg, #000 0%, #000 49%, transparent 51%, transparent 100%);
+  mix-blend-mode: screen;
+  animation: stage2-jutsu-vanish-flash-half 0.62s ease-out forwards;
+}
+
+.stage2-jutsu-vanish-flash::after {
+  content: '';
+  position: absolute;
+  left: 42%;
+  top: 46%;
+  width: 34%;
+  height: 34%;
+  margin: -17% 0 0 -17%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(255, 255, 255, 0.62) 44%,
+    transparent 74%
+  );
+  animation: stage2-jutsu-vanish-flash-core 0.28s ease-out forwards;
+}
+
+@keyframes stage2-jutsu-vanish-flash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 42%) scale(0.35);
+    filter: blur(1px);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, 42%) scale(0.95);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 42%) scale(2.65);
+    filter: blur(10px);
+  }
+}
+
+@keyframes stage2-jutsu-vanish-flash-half {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  16% {
+    opacity: 1;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.5);
+  }
+}
+
+@keyframes stage2-jutsu-vanish-flash-core {
+  0% {
+    opacity: 0;
+    transform: scale(0.45);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.65);
+  }
+}
+
+.stage2-jutsu-caster {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  line-height: 0;
+}
+
+.stage2-jutsu-cast-line {
+  bottom: 100%;
+  left: 50%;
+  margin-bottom: 0.35rem;
+  max-width: min(17rem, 78vw);
+  font-size: clamp(1rem, 3.2vw, 1.28rem);
+  transform: translateX(-50%);
+  animation: stage2-taunt-pop 0.32s cubic-bezier(0.22, 1.15, 0.36, 1) both;
+}
+
+.stage2-purple-ninja {
+  width: var(--stage2-ninja-w) !important;
+  height: var(--stage2-ninja-h) !important;
+  max-width: var(--stage2-ninja-w);
+  max-height: var(--stage2-ninja-h);
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.stage2-ninja-rive {
+  position: relative;
+  display: block;
+  line-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: var(--stage2-ninja-w) !important;
+  height: var(--stage2-ninja-h) !important;
+  max-width: var(--stage2-ninja-w);
+  max-height: var(--stage2-ninja-h);
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.stage2-ninja-rive__canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.stage2-ninja-rive__canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.stage2-purple-ninja--casting {
+  transform-origin: bottom center;
+  animation: stage2-ninja-cast 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes stage2-ninja-cast {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.04) translateY(-4px);
+  }
+}
+
+.stage2-round-feedback-wrap {
+  position: absolute;
+  left: 50%;
+  top: 30%;
+  z-index: 8;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: min(22rem, 92vw);
+  pointer-events: none;
+  animation: stage2-feedback-pop 0.35s cubic-bezier(0.22, 1.25, 0.36, 1) both;
+}
+
+.stage2-round-feedback-wrap--miss {
+  top: 26%;
+}
+
+/* MISS 說明可長按：父層預設 none，需明確開啟才能收到 pointer / touch */
+.stage2-round-feedback-wrap--holdable {
+  pointer-events: auto;
+}
+
+.stage2-round-feedback.quiz-status-stroke-text {
+  position: static;
+  transform: none;
+  margin: 0;
+  padding: 0;
+  font-size: clamp(2.5rem, 12vw, 4.75rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-align: center;
+  opacity: 0.92;
+}
+
+.stage2-round-feedback-explanation-box {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.75rem 0.55rem;
+  border-radius: 0.7rem;
+  background: rgba(15, 10, 28, 0.72);
+  border: 2px solid rgba(252, 211, 77, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.stage2-round-feedback-explanation-box:focus-visible {
+  outline: 2px solid rgba(253, 224, 71, 0.9);
+  outline-offset: 2px;
+}
+
+.stage2-round-feedback-explanation-box:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.stage2-round-feedback-explanation-box--extended {
+  border-color: rgba(253, 224, 71, 0.85);
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 0 3px rgba(252, 211, 77, 0.25);
+}
+
+.stage2-round-feedback-explanation {
+  margin: 0;
+  padding: 0 0.15rem;
+  color: #fef9c3;
+  font-size: clamp(0.95rem, 3.4vw, 1.2rem);
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.stage2-round-feedback-hold-hint {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  font-size: clamp(0.72rem, 2.6vw, 0.88rem);
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  color: rgba(254, 240, 138, 0.82);
+  letter-spacing: 0.02em;
+}
+
+.stage2-round-feedback--bingo.quiz-status-stroke-text {
+  color: rgba(255, 236, 61, 0.92);
+}
+
+.stage2-round-feedback--miss.quiz-status-stroke-text {
+  color: rgba(254, 202, 202, 0.92);
+}
+
+@keyframes stage2-feedback-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.65);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.stage2-round-timer.quiz-status-stroke-text {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  bottom: auto;
+  z-index: 4;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  border: none;
+  background: none;
+  font-size: clamp(2.75rem, 11vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 236, 61, 0.88);
+  opacity: 0.9;
+  -webkit-text-stroke: 3px rgba(26, 26, 46, 0.72);
+  text-shadow:
+    2px 2px 0 rgba(26, 26, 46, 0.72),
+    -1px 1px 0 rgba(26, 26, 46, 0.72),
+    1px -1px 0 rgba(26, 26, 46, 0.72);
+  pointer-events: none;
+}
+
+.stage2-round-timer--urgent.quiz-status-stroke-text {
+  color: rgba(254, 202, 202, 0.92);
+  animation: stage2-timer-pulse 0.55s ease-in-out infinite alternate;
+}
+
+@keyframes stage2-timer-pulse {
+  from {
+    transform: translateX(-50%) scale(1);
+  }
+  to {
+    transform: translateX(-50%) scale(1.08);
+  }
+}
+
+.stage2-clone-field {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 0;
+  width: 100%;
+  margin-inline: auto;
+  padding: 0 0.25rem var(--stage2-ninja-feet-offset);
+  box-sizing: border-box;
+}
+
+.stage2-clone-field--n3 .stage2-clone,
+.stage2-clone-field--n5 .stage2-clone,
+.stage2-clone-field--n7 .stage2-clone {
+  flex: 0 0 auto;
+  width: var(--stage2-ninja-w);
+  min-width: 0;
+  height: auto;
+  margin-inline: 0;
+  max-width: var(--stage2-ninja-w);
+}
+
+.stage2-clone-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.stage2-clone-figure {
+  position: relative;
+  flex: 0 0 var(--stage2-ninja-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: var(--stage2-ninja-h);
+  line-height: 0;
+}
+
+.stage2-clone-figure > span:not(.stage2-clone-taunt) {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  line-height: 0;
+}
+
+/* Rive 分身：固定為術式施放前同款尺寸（不受 clone slot 百分比寬度影響） */
+.stage2-clone-figure > .stage2-ninja-rive-mount {
+  display: block !important;
+  width: var(--stage2-ninja-w) !important;
+  height: var(--stage2-ninja-h) !important;
+  max-width: none !important;
+  margin-inline: auto;
+  line-height: 0;
+}
+
+.stage2-clone-field--n3 .stage2-purple-ninja,
+.stage2-clone-field--n5 .stage2-purple-ninja,
+.stage2-clone-field--n7 .stage2-purple-ninja {
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+.stage2-clone--pending {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.stage2-clone--spawn-in {
+  animation: stage2-clone-in
+    min(0.45s, calc(var(--stage2-beat-ms, 545ms) * 0.82))
+    cubic-bezier(0.22, 1.2, 0.36, 1) both;
+  animation-delay: calc(var(--clone-spawn-i, 0) * var(--stage2-beat-ms, 545ms) * 0.1);
+}
+
+/* 答對／MISS 後：非目標分身漸漸淡出消失 */
+.stage2-clone--culled {
+  pointer-events: none;
+  animation: stage2-clone-cull 0.72s ease forwards;
+  animation-delay: calc(var(--clone-spawn-i, 0) * 0.08s);
+}
+
+@keyframes stage2-clone-cull {
+  0% {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+  45% {
+    opacity: 0.55;
+    transform: scale(0.96) translateY(4px);
+    filter: blur(0.5px);
+  }
+  72% {
+    opacity: 0;
+    visibility: visible;
+    transform: scale(0.9) translateY(10px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.88) translateY(12px);
+    filter: blur(3px);
+    flex: 0 0 0 !important;
+    max-width: 0 !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+  }
+}
+
+/* 僅留正確分身至下一題 */
+.stage2-clone-field--correct-revealed {
+  justify-content: center;
+}
+
+.stage2-clone-field--correct-revealed .stage2-clone--correct-revealed {
+  flex: 0 1 auto !important;
+  width: var(--stage2-ninja-w) !important;
+  max-width: var(--stage2-ninja-w) !important;
+}
+
+/* 5／7 分身首次：分身出現前 Boss 美漫台詞 */
+.stage2-boss-callout {
+  position: absolute;
+  top: 6%;
+  left: 50%;
+  z-index: 40;
+  width: min(96%, 36rem);
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.stage2-boss-callout__line {
+  position: relative;
+  display: inline-block;
+  margin: 0;
+  padding: 0.35rem 0.15rem;
+  max-width: 100%;
+}
+
+.stage2-boss-callout__text {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  font-family: var(--font-fredoka, 'Fredoka'), 'Bangers', 'Arial Black', sans-serif;
+  font-size: clamp(1.35rem, 5.4vw, 2.15rem);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.02em;
+  white-space: normal;
+  text-wrap: balance;
+  background: linear-gradient(
+    105deg,
+    #fef9c3 0%,
+    #fde68a 22%,
+    #f9a8d4 48%,
+    #e9d5ff 72%,
+    #fef08a 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(88, 28, 135, 0.55);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 0 14px rgba(244, 114, 182, 0.65))
+    drop-shadow(0 0 28px rgba(168, 85, 247, 0.45))
+    drop-shadow(0 3px 0 rgba(46, 16, 72, 0.95))
+    drop-shadow(0 5px 12px rgba(0, 0, 0, 0.35));
+  animation:
+    stage2-boss-callout-pop 0.5s cubic-bezier(0.18, 1.35, 0.32, 1) both,
+    stage2-boss-callout-shimmer 2.2s linear 0.35s infinite;
+}
+
+.stage2-boss-callout__float {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  animation: stage2-boss-callout-float 1.1s ease-in-out 0.5s infinite alternate;
+}
+
+.stage2-boss-callout__glow {
+  position: absolute;
+  inset: -35% -20%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 80% 70% at 50% 50%,
+    rgba(244, 114, 182, 0.45) 0%,
+    rgba(168, 85, 247, 0.22) 45%,
+    transparent 72%
+  );
+  filter: blur(12px);
+  animation: stage2-boss-callout-glow-pulse 0.85s ease-in-out infinite alternate;
+}
+
+.stage2-boss-callout--subtle .stage2-boss-callout__text {
+  font-size: clamp(1.05rem, 4vw, 1.38rem);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  background: none;
+  color: rgba(221, 214, 254, 0.92);
+  -webkit-text-stroke: 0;
+  paint-order: unset;
+  filter: drop-shadow(0 1px 0 rgba(46, 16, 72, 0.75))
+    drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
+  animation: stage2-boss-callout-pop-subtle 0.38s ease-out both;
+}
+
+.stage2-boss-callout--subtle .stage2-boss-callout__float {
+  animation: none;
+}
+
+.stage2-boss-callout--subtle .stage2-boss-callout__glow {
+  inset: -22% -14%;
+  opacity: 0.4;
+  background: radial-gradient(
+    ellipse 70% 60% at 50% 50%,
+    rgba(168, 85, 247, 0.22) 0%,
+    transparent 70%
+  );
+  filter: blur(10px);
+  animation: none;
+}
+
+.stage2-boss-callout--extreme .stage2-boss-callout__text {
+  font-size: clamp(1.85rem, 7.5vw, 2.85rem);
+  letter-spacing: 0.08em;
+  animation:
+    stage2-boss-callout-pop 0.52s cubic-bezier(0.16, 1.4, 0.28, 1) both,
+    stage2-boss-callout-shimmer 1.6s linear 0.2s infinite;
+}
+
+.stage2-boss-callout--extreme .stage2-boss-callout__float {
+  animation:
+    stage2-boss-callout-float 0.75s ease-in-out 0.4s infinite alternate,
+    stage2-boss-callout-shake 0.55s ease-in-out 0.55s infinite;
+}
+
+.stage2-boss-callout--extreme .stage2-boss-callout__glow {
+  inset: -50% -28%;
+  background: radial-gradient(
+    ellipse 90% 75% at 50% 50%,
+    rgba(250, 204, 21, 0.35) 0%,
+    rgba(244, 114, 182, 0.5) 28%,
+    rgba(168, 85, 247, 0.28) 55%,
+    transparent 75%
+  );
+  filter: blur(18px);
+}
+
+@keyframes stage2-boss-callout-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.75) translateY(16px);
+  }
+  70% {
+    transform: scale(1.06) translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes stage2-boss-callout-pop-subtle {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stage2-boss-callout-shimmer {
+  to {
+    background-position: 200% center;
+  }
+}
+
+@keyframes stage2-boss-callout-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes stage2-boss-callout-glow-pulse {
+  from {
+    opacity: 0.65;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes stage2-boss-callout-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-2px);
+  }
+  75% {
+    transform: translateX(2px);
+  }
+}
+
+.stage2-clone-field--shuffling::before {
+  content: '';
+  position: absolute;
+  inset: -8% -4%;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 70% 55% at 50% 42%,
+    rgba(168, 85, 247, 0.28) 0%,
+    rgba(168, 85, 247, 0) 68%
+  );
+  pointer-events: none;
+  animation: stage2-shuffle-glow
+    calc(var(--stage2-beat-ms, 545ms) * 0.75) ease-in-out infinite alternate;
+}
+
+.stage2-clone-field--shuffling-boost::before {
+  inset: -12% -6%;
+  background: radial-gradient(
+    ellipse 78% 62% at 50% 40%,
+    rgba(192, 132, 252, 0.48) 0%,
+    rgba(168, 85, 247, 0.12) 55%,
+    rgba(168, 85, 247, 0) 72%
+  );
+  animation: stage2-shuffle-glow-boost
+    calc(var(--stage2-beat-ms, 545ms) * 0.48) ease-in-out infinite alternate;
+}
+
+.stage2-clone-field--shuffling-extreme {
+  isolation: isolate;
+}
+
+.stage2-clone-field--shuffling-extreme::before {
+  inset: -42% -28%;
+  background: radial-gradient(
+    circle closest-side at 50% 42%,
+    rgba(244, 114, 182, 0.62) 0%,
+    rgba(192, 132, 252, 0.38) 32%,
+    rgba(88, 28, 135, 0.12) 52%,
+    rgba(168, 85, 247, 0) 72%
+  );
+  filter: blur(18px);
+  animation: stage2-shuffle-glow-extreme
+    calc(var(--stage2-beat-ms, 545ms) * 0.34) ease-in-out infinite alternate;
+}
+
+/* 第十回合：極速洗牌視覺（光效僅在 ::before，避免與 FLIP 動畫搶 transform） */
+.stage2-clone-field--shuffling-finale::before {
+  inset: -100% -66%;
+  background: radial-gradient(
+    circle closest-side at 50% 42%,
+    rgba(250, 204, 21, 0.58) 0%,
+    rgba(244, 114, 182, 0.52) 28%,
+    rgba(192, 132, 252, 0.32) 50%,
+    rgba(168, 85, 247, 0.08) 84%,
+    rgba(168, 85, 247, 0) 100%
+  );
+  filter: blur(32px);
+  animation: stage2-shuffle-glow-finale
+    calc(var(--stage2-beat-ms, 545ms) * 0.3) ease-in-out infinite alternate;
+}
+
+@keyframes stage2-shuffle-field-pulse-finale {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  33% {
+    transform: scale(1.04) rotate(-0.55deg);
+  }
+  66% {
+    transform: scale(1.06) rotate(0.55deg);
+  }
+}
+
+@keyframes stage2-shuffle-glow-finale {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stage2-shuffle-field-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.012);
+  }
+}
+
+@keyframes stage2-shuffle-field-pulse-boost {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.022);
+  }
+}
+
+@keyframes stage2-shuffle-field-pulse-extreme {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+  25% {
+    transform: scale(1.028) rotate(-0.35deg);
+  }
+  50% {
+    transform: scale(1.034) rotate(0deg);
+  }
+  75% {
+    transform: scale(1.028) rotate(0.35deg);
+  }
+}
+
+@keyframes stage2-shuffle-glow {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stage2-shuffle-glow-boost {
+  from {
+    opacity: 0.62;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stage2-shuffle-glow-extreme {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes stage2-shuffle-extreme-sweep {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.stage2-clone-field--shuffling .stage2-clone {
+  z-index: 2;
+}
+
+.stage2-clone-field--final-phase .stage2-clone::after {
+  content: '';
+  position: absolute;
+  inset: 6% 10% 18%;
+  z-index: 1;
+  border-radius: 999px;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(244, 114, 182, 0.14) 0%,
+    rgba(192, 132, 252, 0.08) 45%,
+    rgba(168, 85, 247, 0) 100%
+  );
+}
+
+.stage2-clone-field--final-phase .stage2-clone-field--shuffling .stage2-clone::after,
+.stage2-clone-field--final-phase.stage2-clone-field--shuffling .stage2-clone::after {
+  animation: stage2-clone-afterimage calc(var(--stage2-beat-ms, 545ms) * 0.38) linear infinite;
+}
+
+.stage2-clone-field--final-phase-2.stage2-clone-field--shuffling .stage2-clone::after {
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.32);
+}
+
+.stage2-clone-field--final-phase-3.stage2-clone-field--shuffling .stage2-clone::after {
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.26);
+}
+
+@keyframes stage2-clone-afterimage {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.96);
+  }
+  35% {
+    opacity: 0.26;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(9px) scale(1.02);
+  }
+}
+
+.stage2-shuffle-shockwave {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--stage2-ninja-feet-offset) + 0.25rem);
+  width: min(42rem, 92%);
+  height: clamp(0.65rem, 1.4vw, 0.95rem);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(250, 204, 21, 0.58) 0%,
+    rgba(244, 114, 182, 0.4) 34%,
+    rgba(192, 132, 252, 0.22) 62%,
+    rgba(168, 85, 247, 0) 100%
+  );
+  animation: stage2-shuffle-shockwave 0.34s ease-out forwards;
+}
+
+@keyframes stage2-shuffle-shockwave {
+  from {
+    opacity: 0.9;
+    transform: translateX(-50%) scaleX(0.28);
+    filter: blur(0.5px);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scaleX(1.8);
+    filter: blur(6px);
+  }
+}
+
+/* 洗牌中分身輕微扭曲：用內層 figure，避免與 FLIP 位移互相打架 */
+.stage2-clone-field--shuffling .stage2-clone .stage2-clone-figure {
+  will-change: transform, filter;
+  animation: stage2-clone-shuffle-warp
+    calc(var(--stage2-beat-ms, 545ms) * 0.62) ease-in-out infinite;
+}
+
+.stage2-clone-field--shuffling-boost .stage2-clone .stage2-clone-figure {
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.5);
+}
+
+.stage2-clone-field--shuffling-extreme .stage2-clone .stage2-clone-figure {
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.42);
+}
+
+.stage2-clone-field--shuffling-finale .stage2-clone .stage2-clone-figure {
+  animation-duration: calc(var(--stage2-beat-ms, 545ms) * 0.36);
+}
+
+/* 新洗牌樣式：Arc（拋物弧感） */
+.stage2-clone-field--shuffle-style-arc .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-arc;
+}
+
+/* 新洗牌樣式：Phase（殘影位移感） */
+.stage2-clone-field--shuffle-style-phase .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-phase;
+}
+
+.stage2-clone-field--shuffle-style-zigzag .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-zigzag;
+}
+
+.stage2-clone-field--shuffle-style-slingshot .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-slingshot;
+}
+
+.stage2-clone-field--shuffle-style-drift .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-drift;
+}
+
+.stage2-clone-field--shuffle-style-snap .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-snap;
+}
+
+.stage2-clone-field--shuffle-style-vortex .stage2-clone .stage2-clone-figure {
+  animation-name: stage2-clone-shuffle-warp-vortex;
+}
+
+@keyframes stage2-clone-shuffle-warp {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) skewX(0deg) scaleX(1) scaleY(1);
+    filter: blur(0);
+  }
+  25% {
+    transform: translate3d(-1px, 0, 0) skewX(-1.6deg) scaleX(1.02) scaleY(0.995);
+    filter: blur(0.2px);
+  }
+  50% {
+    transform: translate3d(1px, 0, 0) skewX(1.8deg) scaleX(0.99) scaleY(1.01);
+    filter: blur(0.45px);
+  }
+  75% {
+    transform: translate3d(-1px, 0, 0) skewX(-1.2deg) scaleX(1.015) scaleY(0.998);
+    filter: blur(0.15px);
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-arc {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) skewX(0deg) scale(1);
+    filter: blur(0);
+  }
+  22% {
+    transform: translate3d(-1px, -1px, 0) skewX(-1.2deg) scale(1.015, 0.99);
+    filter: blur(0.15px);
+  }
+  50% {
+    transform: translate3d(0, -2px, 0) skewX(1.4deg) scale(1.02, 0.985);
+    filter: blur(0.35px);
+  }
+  78% {
+    transform: translate3d(1px, -1px, 0) skewX(-0.9deg) scale(1.01, 0.995);
+    filter: blur(0.1px);
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-phase {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) skewX(0deg) scaleX(1) scaleY(1);
+    filter: blur(0);
+    opacity: 1;
+  }
+  20% {
+    transform: translate3d(-2px, 0, 0) skewX(-2.2deg) scaleX(1.03) scaleY(0.99);
+    filter: blur(0.3px);
+    opacity: 0.92;
+  }
+  50% {
+    transform: translate3d(2px, 0, 0) skewX(2.4deg) scaleX(0.985) scaleY(1.02);
+    filter: blur(0.55px);
+    opacity: 1;
+  }
+  80% {
+    transform: translate3d(-1px, 0, 0) skewX(-1.6deg) scaleX(1.02) scaleY(0.995);
+    filter: blur(0.2px);
+    opacity: 0.94;
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-zigzag {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) skewX(0deg) scale(1);
+    filter: blur(0);
+  }
+  18% {
+    transform: translate3d(-2px, 0, 0) skewX(-2deg) scale(1.015, 0.992);
+    filter: blur(0.2px);
+  }
+  38% {
+    transform: translate3d(2px, -1px, 0) skewX(2.1deg) scale(0.995, 1.01);
+    filter: blur(0.42px);
+  }
+  62% {
+    transform: translate3d(-1px, 0, 0) skewX(-1.6deg) scale(1.012, 0.996);
+    filter: blur(0.24px);
+  }
+  82% {
+    transform: translate3d(1px, -1px, 0) skewX(1.4deg) scale(1.006, 1.002);
+    filter: blur(0.16px);
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-slingshot {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  26% {
+    transform: translate3d(-1px, 1px, 0) scale(0.97, 1.02);
+    filter: blur(0.2px);
+  }
+  58% {
+    transform: translate3d(2px, -1px, 0) scale(1.03, 0.985);
+    filter: blur(0.5px);
+  }
+  84% {
+    transform: translate3d(-1px, 0, 0) scale(1.008, 1);
+    filter: blur(0.16px);
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) skewX(0deg) scale(1);
+    filter: blur(0);
+  }
+  33% {
+    transform: translate3d(-1px, -2px, 0) skewX(-1deg) scale(1.008, 0.996);
+    filter: blur(0.2px);
+  }
+  66% {
+    transform: translate3d(1px, 1px, 0) skewX(1.1deg) scale(0.996, 1.008);
+    filter: blur(0.34px);
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-snap {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: blur(0);
+  }
+  22% {
+    transform: translate3d(-2px, 0, 0) scale(1.018, 0.992);
+    filter: blur(0.24px);
+  }
+  46% {
+    transform: translate3d(2px, 0, 0) scale(0.988, 1.014);
+    filter: blur(0.58px);
+  }
+  70% {
+    transform: translate3d(-1px, 0, 0) scale(1.01, 0.998);
+    filter: blur(0.24px);
+  }
+}
+
+@keyframes stage2-clone-shuffle-warp-vortex {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg) scale(1);
+    filter: blur(0);
+  }
+  28% {
+    transform: translate3d(-1px, -1px, 0) rotate(-1.2deg) scale(1.01, 0.995);
+    filter: blur(0.22px);
+  }
+  56% {
+    transform: translate3d(1px, -1px, 0) rotate(1.3deg) scale(0.994, 1.012);
+    filter: blur(0.5px);
+  }
+  82% {
+    transform: translate3d(0, 0, 0) rotate(-0.7deg) scale(1.004, 0.998);
+    filter: blur(0.18px);
+  }
+}
+
+/* 洗牌 FLIP 進行中：暫停全幅旋轉光暈，減輕 GPU 負擔 */
+.stage2-scene-shell:has(.stage2-clone-field--shuffling) > .stage2-round-power-aura {
+  opacity: 0.38;
+}
+
+.stage2-scene-shell:has(.stage2-clone-field--shuffling) > .stage2-round-power-aura,
+.stage2-scene-shell:has(.stage2-clone-field--shuffling)
+  .stage2-round-power-aura__bloom,
+.stage2-scene-shell:has(.stage2-clone-field--shuffling)
+  .stage2-round-power-aura__spin {
+  animation-play-state: paused;
+}
+
+@keyframes stage2-clone-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.stage2-clone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  width: var(--stage2-ninja-w);
+  max-width: var(--stage2-ninja-w);
+  height: var(--stage2-clone-total-h);
+  min-height: var(--stage2-clone-total-h);
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  overflow: visible;
+  transform-origin: bottom center;
+}
+
+.stage2-clone-taunt {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  z-index: 3;
+  margin-bottom: 0.2rem;
+  width: max-content;
+  max-width: min(15rem, 48vw);
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.7rem;
+  background: rgba(36, 12, 58, 0.82);
+  border: 2px solid rgba(216, 180, 254, 0.55);
+  color: rgba(243, 232, 255, 0.94);
+  font-size: clamp(0.95rem, 2.85vw, 1.18rem);
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  animation: stage2-taunt-pop 0.32s cubic-bezier(0.22, 1.15, 0.36, 1) both;
+  animation-delay: var(--taunt-delay, 0ms);
+  transform: translateX(-50%);
+}
+
+.stage2-clone-taunt::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 11px;
+  height: 11px;
+  background: rgba(36, 12, 58, 0.82);
+  border-right: 2px solid rgba(216, 180, 254, 0.5);
+  border-bottom: 2px solid rgba(216, 180, 254, 0.5);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.stage2-clone-field--n5 .stage2-clone-taunt {
+  max-width: min(13rem, 42vw);
+  font-size: clamp(0.88rem, 2.5vw, 1.05rem);
+  padding: 0.4rem 0.65rem;
+}
+
+.stage2-clone-field--n7 .stage2-clone-taunt {
+  max-width: min(11.5rem, 38vw);
+  font-size: clamp(0.82rem, 2.2vw, 0.98rem);
+  padding: 0.35rem 0.55rem;
+}
+
+.stage2-clone-field--n3 .stage2-clone-word,
+.stage2-clone-field--n5 .stage2-clone-word,
+.stage2-clone-field--n7 .stage2-clone-word {
+  max-width: min(100%, calc(var(--stage2-ninja-w) + 0.75rem));
+}
+
+.stage2-clone-word.quiz-play-opt-label {
+  font-size: clamp(1.28rem, 4.2vw, 1.75rem);
+}
+
+.stage2-clone-field--n5 .stage2-clone-word.quiz-play-opt-label {
+  font-size: clamp(1.15rem, 3.8vw, 1.55rem);
+}
+
+.stage2-clone-field--n7 .stage2-clone-word.quiz-play-opt-label {
+  font-size: clamp(1.05rem, 3.4vw, 1.4rem);
+}
+
+@keyframes stage2-taunt-pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.88);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.stage2-clone:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.stage2-clone-ninja {
+  transform-origin: bottom center;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
+  transition:
+    transform 0.15s ease,
+    filter 0.15s ease;
+}
+
+.stage2-clone:hover:not(:disabled) .stage2-clone-ninja,
+.stage2-clone:focus-visible:not(:disabled) .stage2-clone-ninja {
+  transform: scale(1.06);
+  filter: drop-shadow(0 6px 14px rgba(168, 85, 247, 0.55));
+}
+
+.stage2-clone:active:not(:disabled) .stage2-clone-ninja {
+  transform: scale(0.96);
+}
+
+.stage2-clone--hit .stage2-clone-figure {
+  animation: stage2-clone-hit-shake 0.36s ease-out;
+}
+
+.stage2-scene-shell--final-phase .stage2-clone--hit .stage2-clone-figure::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: 42%;
+  height: 42%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border-radius: 50%;
+  background:
+    linear-gradient(0deg, transparent 46%, rgba(255, 255, 255, 0.9) 50%, transparent 54%),
+    linear-gradient(90deg, transparent 46%, rgba(255, 255, 255, 0.9) 50%, transparent 54%);
+  mix-blend-mode: screen;
+  animation: stage2-hit-cross-flash 0.28s ease-out forwards;
+}
+
+@keyframes stage2-hit-cross-flash {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.58);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.38);
+    filter: blur(2px);
+  }
+}
+
+@keyframes stage2-clone-hit-shake {
+  0%,
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  18% {
+    transform: translate(-3px, 1px) rotate(-2deg);
+  }
+  36% {
+    transform: translate(3px, -1px) rotate(2deg);
+  }
+  54% {
+    transform: translate(-2px, 2px) rotate(-1deg);
+  }
+  72% {
+    transform: translate(2px, -1px) rotate(1deg);
+  }
+}
+
+.stage2-clone-word {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 var(--stage2-word-slot);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: max-content;
+  max-width: calc(var(--stage2-ninja-w) + 2rem);
+  margin: 0;
+  padding: 0 0 0.05rem;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow: visible;
+  text-align: center;
+  line-height: 1.15;
+  pointer-events: none;
+}
+
+.stage2-clone-word--long.quiz-play-opt-label {
+  font-size: clamp(1.08rem, 3.5vw, 1.48rem);
+}
+
+.stage2-clone-word--very-long.quiz-play-opt-label {
+  font-size: clamp(0.92rem, 3vw, 1.28rem);
+  letter-spacing: -0.02em;
+}
+
+.stage2-clone-field--n5 .stage2-clone-word--long.quiz-play-opt-label {
+  font-size: clamp(0.98rem, 3.2vw, 1.32rem);
+}
+
+.stage2-clone-field--n5 .stage2-clone-word--very-long.quiz-play-opt-label {
+  font-size: clamp(0.86rem, 2.8vw, 1.16rem);
+}
+
+.stage2-clone-field--n7 .stage2-clone-word--long.quiz-play-opt-label {
+  font-size: clamp(0.9rem, 2.9vw, 1.2rem);
+}
+
+.stage2-clone-field--n7 .stage2-clone-word--very-long.quiz-play-opt-label {
+  font-size: clamp(0.78rem, 2.5vw, 1.05rem);
+}
+
+.stage2-hero {
+  display: block;
+  width: auto !important;
+  height: auto !important;
+  max-height: var(--stage2-hero-h);
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+}
+
+.stage2-hero-rive {
+  position: relative;
+  display: block;
+  line-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: clamp(134px, 31vw, 184px) !important;
+  height: var(--stage2-hero-h) !important;
+  max-height: var(--stage2-hero-h);
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.stage2-hero-mount {
+  display: block;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.stage2-hero-rive__canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.stage2-hero-rive__canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.stage2-hero-wrap {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 0;
+}
+
+.stage2-hero-wrap--blue {
+  margin-left: 0.35rem;
+}
+
+.stage2-heroine-hint {
+  position: absolute;
+  left: 100%;
+  top: 52%;
+  z-index: 4;
+  margin-left: 0.55rem;
+  width: max-content;
+  max-width: min(20rem, 42vw);
+  padding: 0.55rem 0.85rem 0.6rem;
+  border-radius: 0.75rem;
+  background: rgba(12, 36, 68, 0.9);
+  border: 2px solid rgba(125, 211, 252, 0.65);
+  color: #e0f2fe;
+  font-size: clamp(0.95rem, 2.85vw, 1.22rem);
+  font-weight: 700;
+  line-height: 1.45;
+  text-align: center;
+  pointer-events: none;
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.4),
+    0 0 0 2px rgba(56, 189, 248, 0.15);
+  animation: stage2-heroine-hint-pop 0.38s cubic-bezier(0.22, 1.15, 0.36, 1) both;
+  transform: translateY(-50%);
+}
+
+.stage2-heroine-hint::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  margin-top: -7px;
+  border: 7px solid transparent;
+  border-right-color: rgba(125, 211, 252, 0.65);
+}
+
+.stage2-heroine-hint-lead {
+  margin: 0;
+  padding: 0;
+  color: rgba(224, 242, 254, 0.95);
+  font: inherit;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.stage2-heroine-hint-answer {
+  margin: 0.28rem 0 0;
+  padding: 0;
+  color: #fde047;
+  font-size: 1.12em;
+  font-weight: 800;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 0 12px rgba(250, 204, 21, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.55);
+  word-break: break-word;
+  overflow: visible;
+}
+
+@keyframes stage2-heroine-hint-pop {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-50% + 8px)) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+/* 手機：提示氣泡改在頭下方身體上 */
+@media (max-width: 640px) {
+  .stage2-heroine-hint {
+    left: 50%;
+    top: 24%;
+    margin-left: 0;
+    max-width: min(17rem, 90vw);
+    font-size: clamp(1rem, 3.6vw, 1.2rem);
+    transform: translateX(-50%);
+  }
+
+  .stage2-heroine-hint-answer {
+    font-size: 1.14em;
+    color: #fef08a;
+  }
+
+  .stage2-heroine-hint::after {
+    top: auto;
+    bottom: 100%;
+    left: 50%;
+    right: auto;
+    margin-top: 0;
+    margin-left: -7px;
+    border: 7px solid transparent;
+    border-right-color: transparent;
+    border-bottom-color: rgba(125, 211, 252, 0.65);
+  }
+
+  @keyframes stage2-heroine-hint-pop {
+    from {
+      opacity: 0;
+      transform: translateX(-50%) translateY(6px) scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+  }
+}
+
+.stage2-hero--red {
+  margin-right: 0.35rem;
+}
+
+.stage2-shuriken {
+  position: absolute;
+  left: var(--from-x);
+  top: var(--from-y);
+  z-index: 10;
+  display: block;
+  width: clamp(40px, 11vw, 52px);
+  height: clamp(40px, 11vw, 52px);
+  margin-left: calc(clamp(40px, 11vw, 52px) / -2);
+  margin-top: calc(clamp(40px, 11vw, 52px) / -2);
+  line-height: 0;
+  animation: stage2-shuriken-fly var(--stage2-shuriken-fly-ms, 280ms) ease-in forwards;
+  pointer-events: none;
+  transform-origin: center center;
+}
+
+.stage2-shuriken-img {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.55));
+  user-select: none;
+  pointer-events: none;
+}
+
+@keyframes stage2-shuriken-fly {
+  from {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translate(calc(var(--to-x) - var(--from-x)), calc(var(--to-y) - var(--from-y)))
+      rotate(540deg) scale(0.7);
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage2-purple-ninja--casting,
+  .stage2-jutsu-caster-body--fading,
+  .stage2-jutsu-vanish-flash,
+  .stage2-jutsu-vanish-flash::before,
+  .stage2-jutsu-vanish-flash::after,
+  .stage2-clone--spawn-in,
+  .stage2-clone--culled,
+  .stage2-boss-callout__text,
+  .stage2-boss-callout__float,
+  .stage2-boss-callout__glow,
+  .stage2-clone-field--shuffling,
+  .stage2-clone-field--shuffling::before,
+  .stage2-clone-field--shuffling::after,
+  .stage2-clone-field--shuffling-boost,
+  .stage2-clone-field--shuffling-boost::before,
+  .stage2-clone-field--shuffling-extreme,
+  .stage2-clone-field--shuffling-extreme::before,
+  .stage2-clone-field--shuffling-finale,
+  .stage2-clone-field--shuffling-finale::before,
+  .stage2-clone-field--shuffling .stage2-clone .stage2-clone-figure,
+  .stage2-round-power-aura__spin,
+  .stage2-round-power-aura__bloom,
+  .stage2-shuriken,
+  .stage2-clone--hit .stage2-clone-figure,
+  .stage2-round-timer--urgent,
+  .stage2-round-feedback-wrap,
+  .stage2-round-feedback,
+  .stage2-clone-taunt {
+    animation: none;
+  }
+}

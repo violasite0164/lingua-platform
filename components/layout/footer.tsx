@@ -37,7 +37,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href={GUEST_HOME_PATH} className="flex items-center gap-2 font-bold text-base mb-3">
               <BookOpen className="h-5 w-5 text-primary" />
-              LinguaLearn
+              Vint Platform
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">
               系統化學習語言，互動影片課程配合<br />
@@ -68,7 +68,7 @@ export function Footer() {
         <Separator className="my-8" />
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <p>© {new Date().getFullYear()} LinguaLearn. 保留所有權利。</p>
+          <p>© {new Date().getFullYear()} Vint Platform. 保留所有權利。</p>
           <p>Made with Next.js · Supabase · Cloudflare</p>
         </div>
       </div>

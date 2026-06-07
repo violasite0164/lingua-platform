@@ -23,6 +23,22 @@ function parseBool(raw: unknown): boolean {
   return s === 'true' || s === '1' || s === 'on';
 }
 
+function parseSubscriptionPlanGiftsFromForm(
+  formData: FormData,
+): { shop_item_id: string; quantity: number }[] {
+  const ids = formData
+    .getAll('gift_shop_item_ids')
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+
+  return ids.map((shop_item_id) => {
+    const raw = formData.get(`gift_qty_${shop_item_id}`);
+    const n = Number.parseInt(String(raw ?? '').trim(), 10);
+    const quantity = Number.isFinite(n) ? Math.min(99, Math.max(1, n)) : 1;
+    return { shop_item_id, quantity };
+  });
+}
+
 export async function upsertSubscriptionPlan(
   formData: FormData,
 ): Promise<CommerceManageActionResult> {
@@ -39,30 +55,62 @@ export async function upsertSubscriptionPlan(
   const currency = String(formData.get('currency') ?? 'usd').trim().toLowerCase();
   const stripePriceId = String(formData.get('stripe_price_id') ?? '').trim() || null;
   const isActive = parseBool(formData.get('is_active'));
+  const freePlayGames = parseBool(formData.get('free_play_games'));
   const sortOrder = parseIntSafe(formData.get('sort_order'), 0);
 
   if (!code) return { ok: false, error: '缺少 code（例如 basic / pro）' };
   if (!title) return { ok: false, error: '缺少 title' };
   if (priceCents === null) return { ok: false, error: '價格格式不正確' };
 
-  const { error } = await supabase.from('subscription_plans').upsert(
-    {
-      code,
-      title,
-      description,
-      price_cents: priceCents,
-      currency,
-      stripe_price_id: stripePriceId,
-      is_active: isActive,
-      sort_order: sortOrder,
-    } as never,
-    { onConflict: 'code' },
-  );
+  const planGifts = parseSubscriptionPlanGiftsFromForm(formData);
+
+  const now = new Date().toISOString();
+  const { data: savedPlan, error } = await supabase
+    .from('subscription_plans')
+    .upsert(
+      {
+        code,
+        title,
+        description,
+        price_cents: priceCents,
+        currency,
+        stripe_price_id: stripePriceId,
+        is_active: isActive,
+        free_play_games: freePlayGames,
+        sort_order: sortOrder,
+        updated_at: now,
+      } as never,
+      { onConflict: 'code' },
+    )
+    .select('code')
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
+  if (!savedPlan) {
+    return { ok: false, error: '訂閱方案寫入失敗（請確認 SUPABASE_SERVICE_ROLE_KEY 已設定）。' };
+  }
+
+  const { error: delGiftsErr } = await supabase
+    .from('subscription_plan_gifts')
+    .delete()
+    .eq('plan_code', code);
+  if (delGiftsErr) return { ok: false, error: delGiftsErr.message };
+
+  if (planGifts.length > 0) {
+    const { error: insGiftsErr } = await supabase.from('subscription_plan_gifts').insert(
+      planGifts.map((g) => ({
+        plan_code: code,
+        shop_item_id: g.shop_item_id,
+        quantity: g.quantity,
+      })) as never,
+    );
+    if (insGiftsErr) return { ok: false, error: insGiftsErr.message };
+  }
   revalidatePath('/commerce/manage');
   revalidatePath('/commerce/manage/plans');
   revalidatePath('/commerce');
+  revalidatePath('/profile');
+  revalidatePath('/courses');
   return { ok: true, message: '訂閱方案已儲存' };
 }
 

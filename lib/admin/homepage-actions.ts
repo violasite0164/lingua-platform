@@ -9,6 +9,7 @@ import {
   resolveMarketingThemePreset,
 } from '@/lib/marketing-theme';
 import {
+  HOMEPAGE_BACKGROUND_IMAGE_SLOTS,
   HOME_QUIZ_CTA_MAX_LEN,
   HOME_QUIZ_INTRO_MAX_LEN,
   normalizeHexColor,
@@ -48,7 +49,16 @@ function parseBool(raw: unknown, defaultTrue: boolean): boolean {
 export async function updateHomepageBackdrop(formData: FormData): Promise<HomepageBackdropActionResult> {
   await requireAdmin();
 
-  const imageRaw = String(formData.get('background_image_url') ?? '');
+  const backgroundImageUrls: string[] = [];
+  for (let i = 0; i < HOMEPAGE_BACKGROUND_IMAGE_SLOTS; i++) {
+    const raw = String(formData.get(`background_image_url_${i}`) ?? '');
+    const url = parseOptionalUrl(raw);
+    if (url === '') {
+      return { ok: false, error: `背景圖 ${i + 1}：請輸入有效的 http(s) 網址，或留空。` };
+    }
+    if (url) backgroundImageUrls.push(url);
+  }
+
   const videoRaw = String(formData.get('background_video_url') ?? '');
   const quizResultBgRaw = String(formData.get('home_quiz_result_background_image_url') ?? '');
   const featuresStudentRaw = String(formData.get('features_student_image_url') ?? '');
@@ -56,7 +66,6 @@ export async function updateHomepageBackdrop(formData: FormData): Promise<Homepa
   const teachersCard2Raw = String(formData.get('home_teachers_card_2_image_url') ?? '');
   const teachersCard3Raw = String(formData.get('home_teachers_card_3_image_url') ?? '');
 
-  const imageUrl = parseOptionalUrl(imageRaw);
   const videoUrl = parseOptionalUrl(videoRaw);
   const quizResultBgUrl = parseOptionalUrl(quizResultBgRaw);
   const featuresStudentUrl = parseOptionalUrl(featuresStudentRaw);
@@ -64,7 +73,6 @@ export async function updateHomepageBackdrop(formData: FormData): Promise<Homepa
   const teachersCard2Url = parseOptionalUrl(teachersCard2Raw);
   const teachersCard3Url = parseOptionalUrl(teachersCard3Raw);
   if (
-    imageUrl === '' ||
     videoUrl === '' ||
     quizResultBgUrl === '' ||
     featuresStudentUrl === '' ||
@@ -104,7 +112,8 @@ export async function updateHomepageBackdrop(formData: FormData): Promise<Homepa
   const { data, error } = await supabase
     .from('homepage_config')
     .update({
-      background_image_url: imageUrl,
+      background_image_urls: backgroundImageUrls,
+      background_image_url: backgroundImageUrls[0] ?? null,
       background_video_url: videoUrl,
       overlay_opacity: overlay,
       background_image_enabled: imageEnabled,

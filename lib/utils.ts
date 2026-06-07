@@ -20,6 +20,24 @@ export function formatPrice(price: number, currency = 'HKD'): string {
   return new Intl.NumberFormat('zh-HK', { style: 'currency', currency }).format(price);
 }
 
+/** 課程卡片／詳情：已購付費課顯示「已購入」，其餘顯示免費或價格 */
+export function formatCoursePriceLabel(course: {
+  is_free: boolean;
+  price: number;
+  is_enrolled: boolean;
+}): string {
+  if (course.is_enrolled && !course.is_free) return '已購入';
+  if (course.is_free || course.price === 0) return '免費';
+  return formatPrice(course.price);
+}
+
+export function isCoursePurchased(course: {
+  is_free: boolean;
+  is_enrolled: boolean;
+}): boolean {
+  return course.is_enrolled && !course.is_free;
+}
+
 /** 計算課程完成百分比 */
 export function calcCompletionRate(completed: number, total: number): number {
   if (total === 0) return 0;

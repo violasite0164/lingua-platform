@@ -29,4 +29,4 @@ end $$;
 
 comment on column public.homepage_config.home_teachers_card_1_image_url is '首頁 AI×線上課程說明卡 1 插圖（線上影片課程）';
 comment on column public.homepage_config.home_teachers_card_2_image_url is '首頁 AI×線上課程說明卡 2 插圖（AI 英語快測）';
-comment on column public.homepage_config.home_teachers_card_3_image_url is '首頁 AI×線上課程說明卡 3 插圖（AI 英語鬥）';
+comment on column public.homepage_config.home_teachers_card_3_image_url is '首頁 AI×線上課程說明卡 3 插圖（英語大冒險）';

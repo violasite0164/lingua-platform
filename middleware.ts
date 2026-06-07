@@ -22,6 +22,6 @@ export const config = {
      *
      * 必須覆蓋所有頁面路由，updateSession 才能正確刷新 cookie
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|woff2?|riv|mp3|wav|ogg)$).*)',
   ],
 };

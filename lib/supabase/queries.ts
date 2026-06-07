@@ -3,12 +3,17 @@
  * 在 Server Components / Server Actions 中使用
  */
 import { createClient } from './server';
+import type { CourseCatalogSort } from '@/lib/courses/catalog';
 import type {
   Profile,
   CourseWithTeacher,
+  CourseCatalogItem,
   CourseWithLessons,
+  CourseQuizWithProgress,
   LessonWithProgress,
-  AssignmentWithStudent,
+  LessonTextbook,
+  LessonTimedCue,
+  CourseLevel,
 } from '@/types/database.types';
 
 // ─── Auth helpers ─────────────────────────────────────────
@@ -43,9 +48,27 @@ export async function getCurrentProfile(): Promise<Profile | null> {
 
 // ─── Courses ──────────────────────────────────────────────
 
-/** 取得所有已發布課程（公開頁面用） */
+/** 公開課程分類列表 */
+export async function getPublicCategories() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name');
+
+  if (error) {
+    console.error('[getPublicCategories]', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+/** 取得所有已發布課程（公開頁面用，支援排序／級數／類型） */
 export async function getPublishedCourses(options?: {
   categorySlug?: string;
+  level?: CourseLevel;
+  subscriptionAccess?: 'sub_basic' | 'sub_pro';
+  sort?: CourseCatalogSort;
   limit?: number;
   offset?: number;
 }) {
@@ -58,21 +81,87 @@ export async function getPublishedCourses(options?: {
       teacher:profiles!courses_teacher_id_fkey(id, display_name, avatar_url),
       category:categories(id, name, slug)
     `)
-    .eq('is_published', true)
-    .order('created_at', { ascending: false });
+    .eq('is_published', true);
 
   if (options?.categorySlug) {
-    query = query.eq('categories.slug', options.categorySlug);
+    const { data: cat } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', options.categorySlug)
+      .maybeSingle();
+    if (!cat) return [];
+    query = query.eq('category_id', cat.id);
   }
-  if (options?.limit)  query = query.limit(options.limit);
-  if (options?.offset) query = query.range(options.offset, options.offset + (options.limit ?? 20) - 1);
+
+  if (options?.level) {
+    query = query.eq('level', options.level);
+  }
+
+  if (options?.subscriptionAccess === 'sub_basic') {
+    query = query.eq('sub_basic_free', true);
+  } else if (options?.subscriptionAccess === 'sub_pro') {
+    query = query.eq('sub_pro_free', true);
+  }
+
+  const sort = options?.sort ?? 'newest';
+  switch (sort) {
+    case 'oldest':
+      query = query.order('created_at', { ascending: true });
+      break;
+    case 'popular':
+      query = query.order('student_count', { ascending: false });
+      break;
+    case 'price_asc':
+      query = query.order('price', { ascending: true });
+      break;
+    case 'price_desc':
+      query = query.order('price', { ascending: false });
+      break;
+    case 'title':
+      query = query.order('title', { ascending: true });
+      break;
+    case 'newest':
+    default:
+      query = query.order('created_at', { ascending: false });
+      break;
+  }
+
+  if (options?.limit) query = query.limit(options.limit);
+  if (options?.offset) {
+    query = query.range(
+      options.offset,
+      options.offset + (options.limit ?? 20) - 1,
+    );
+  }
 
   const { data, error } = await query;
   if (error) {
     console.error('[getPublishedCourses]', error.message);
     return [];
   }
-  return data as CourseWithTeacher[];
+
+  const courses = (data ?? []) as CourseWithTeacher[];
+  if (courses.length === 0) return [];
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let enrolledCourseIds = new Set<string>();
+  if (user) {
+    const courseIds = courses.map((c) => c.id);
+    const { data: enrollments } = await supabase
+      .from('enrollments')
+      .select('course_id')
+      .eq('user_id', user.id)
+      .in('course_id', courseIds);
+    enrolledCourseIds = new Set((enrollments ?? []).map((e) => e.course_id));
+  }
+
+  return courses.map((course) => ({
+    ...course,
+    is_enrolled: enrolledCourseIds.has(course.id),
+  })) satisfies CourseCatalogItem[];
 }
 
 /** 取得單一課程詳情（含課堂列表與學生進度） */
@@ -89,7 +178,9 @@ export async function getCourseWithLessons(
     .from('courses')
     .select(`
       *,
-      teacher:profiles!courses_teacher_id_fkey(id, display_name, avatar_url),
+      teacher:profiles!courses_teacher_id_fkey(
+        id, display_name, avatar_url, bio, mentor_specialty
+      ),
       category:categories(id, name, slug)
     `)
     .eq('id', courseId)
@@ -120,6 +211,8 @@ export async function getCourseWithLessons(
 
   // 是否已報名
   let isEnrolled = false;
+  let subscriptionTier: import('@/lib/profile/subscription-display').SubscriptionTier =
+    'free';
   if (user) {
     const { data: enrollment } = await supabase
       .from('enrollments')
@@ -128,6 +221,11 @@ export async function getCourseWithLessons(
       .eq('course_id', courseId)
       .maybeSingle();
     isEnrolled = !!enrollment;
+
+    const { fetchUserSubscriptionTier } = await import(
+      '@/lib/billing/user-subscription-tier'
+    );
+    subscriptionTier = await fetchUserSubscriptionTier(supabase, user.id);
   }
 
   const lessonsWithProgress: LessonWithProgress[] = (lessons ?? []).map((l) => ({
@@ -135,52 +233,76 @@ export async function getCourseWithLessons(
     progress: (progressMap[l.id] as LessonWithProgress['progress']) ?? null,
   }));
 
+  const { data: quizRows } = await supabase
+    .from('course_quizzes')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('is_published', true)
+    .order('sort_order');
+
+  let quizProgressMap: Record<string, unknown> = {};
+  const publishedQuizzes = quizRows ?? [];
+  if (user && publishedQuizzes.length > 0) {
+    const quizIds = publishedQuizzes.map((q) => q.id);
+    const { data: quizProgressRows } = await supabase
+      .from('user_course_quiz_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .in('quiz_id', quizIds);
+    quizProgressMap = Object.fromEntries(
+      (quizProgressRows ?? []).map((p) => [p.quiz_id, p]),
+    );
+  }
+
+  const quizzesWithProgress: CourseQuizWithProgress[] = publishedQuizzes.map((q) => ({
+    ...q,
+    progress:
+      (quizProgressMap[q.id] as CourseQuizWithProgress['progress']) ?? null,
+  }));
+
   return {
     ...(course as CourseWithTeacher),
     lessons: lessonsWithProgress,
+    quizzes: quizzesWithProgress,
     is_enrolled: isEnrolled,
+    subscription_tier: subscriptionTier,
   };
 }
 
-// ─── Assignments ──────────────────────────────────────────
-
-/** 老師批改面板：取得某課程所有作業（含學生資料） */
-export async function getCourseAssignments(
-  courseId: string,
-  status?: 'submitted' | 'grading' | 'graded' | 'returned',
-): Promise<AssignmentWithStudent[]> {
+/** 單元課本教材（依 RLS：已報名或試看單元可讀） */
+export async function getLessonTextbooks(lessonId: string): Promise<LessonTextbook[]> {
   const supabase = await createClient();
-
-  let query = supabase
-    .from('assignments')
-    .select(`
-      *,
-      student:profiles!assignments_student_id_fkey(id, display_name, avatar_url),
-      lesson:lessons!assignments_lesson_id_fkey(id, title)
-    `)
-    .eq('lessons.course_id', courseId)
-    .order('submitted_at', { ascending: false });
-
-  if (status) query = query.eq('status', status);
-
-  const { data, error } = await query;
-  if (error) {
-    console.error('[getCourseAssignments]', error.message);
-    return [];
-  }
-  return (data ?? []) as AssignmentWithStudent[];
-}
-
-/** 學生：取得自己某課堂的作業 */
-export async function getMyAssignment(lessonId: string, userId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('assignments')
+  const { data, error } = await supabase
+    .from('lesson_textbooks')
     .select('*')
     .eq('lesson_id', lessonId)
-    .eq('student_id', userId)
-    .maybeSingle();
-  return data;
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[getLessonTextbooks]', error);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+/** 單元定時互動（依 RLS：已報名或試看單元可讀） */
+export async function getLessonTimedCues(lessonId: string): Promise<LessonTimedCue[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('lesson_timed_cues')
+    .select('*')
+    .eq('lesson_id', lessonId)
+    .eq('is_enabled', true)
+    .order('trigger_at_sec', { ascending: true })
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[getLessonTimedCues]', error);
+    return [];
+  }
+
+  return data ?? [];
 }
 
 // ─── Leaderboard ──────────────────────────────────────────

@@ -14,7 +14,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 });
     }
 
-    const body = (await req.json()) as { sessionId?: string };
+    const body = (await req.json()) as { sessionId?: string; autoClaimStamina?: boolean };
     const sessionId = body.sessionId?.trim();
     if (!sessionId) {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       user.id,
       supabase,
       admin,
+      { autoClaimStamina: body.autoClaimStamina === true },
     );
 
     return NextResponse.json(result);

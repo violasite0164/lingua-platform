@@ -148,7 +148,7 @@ export default function LoginPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm ring-1 ring-white/30">
             <BookOpen className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold tracking-tight">Lingua</span>
+          <span className="text-xl font-bold tracking-tight">Vint</span>
         </div>
 
         {/* Hero text */}
@@ -178,7 +178,7 @@ export default function LoginPage() {
         {/* Testimonial */}
         <blockquote className="relative space-y-2 border-l-2 border-white/30 pl-4">
           <p className="text-sm italic text-primary-foreground/80">
-            「三個月內日語從零到 N3，Lingua 的學習系統真的太有效了！」
+            「三個月內日語從零到 N3，Vint Platform 的學習系統真的太有效了！」
           </p>
           <footer className="text-xs text-primary-foreground/60">— Mei, 學習者</footer>
         </blockquote>
@@ -193,7 +193,7 @@ export default function LoginPage() {
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
               <BookOpen className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold">Lingua</span>
+            <span className="text-xl font-bold">Vint</span>
           </div>
 
           {/* Card */}

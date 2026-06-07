@@ -11,6 +11,8 @@ create type public.user_role         as enum ('student', 'mentor', 'admin');
 create type public.assignment_type   as enum ('text', 'audio', 'video', 'image', 'pdf');
 create type public.assignment_status as enum ('submitted', 'grading', 'graded', 'returned');
 create type public.course_level      as enum ('beginner', 'intermediate', 'advanced');
+create type public.mentor_specialty  as enum ('activity', 'science', 'language', 'other', 'technical');
+create type public.quiz_editor_personality as enum ('toxic', 'gentle');
 
 -- ─── PROFILES ─────────────────────────────────────────────
 -- 擴充 auth.users，每個用戶在此都有一筆記錄
@@ -20,6 +22,8 @@ create table public.profiles (
   display_name    text        not null default '',
   avatar_url      text,
   bio             text,
+  mentor_specialty mentor_specialty,
+  quiz_editor_personality quiz_editor_personality,
 
   -- 遊戲化欄位
   exp             integer     not null default 0 check (exp >= 0),
@@ -291,23 +295,28 @@ begin
 end;
 $$;
 
--- 6. 更新連續學習天數
+-- 6. 更新連續學習天數（每日首次請求時由 middleware 呼叫 update_streak）
 create or replace function public.update_streak(p_user_id uuid)
-returns void language plpgsql security definer as $$
+returns void language plpgsql security definer set search_path = public as $$
 declare
   v_last date;
+  v_today date := (timezone('Asia/Hong_Kong', now()))::date;
 begin
+  if auth.uid() is null or auth.uid() <> p_user_id then
+    return;
+  end if;
+
   select last_active_at into v_last from public.profiles where id = p_user_id;
 
-  if v_last = current_date then
+  if v_last = v_today then
     return;
-  elsif v_last = current_date - 1 then
+  elsif v_last = v_today - 1 then
     update public.profiles
-    set streak_days = streak_days + 1, last_active_at = current_date
+    set streak_days = streak_days + 1, last_active_at = v_today
     where id = p_user_id;
   else
     update public.profiles
-    set streak_days = 1, last_active_at = current_date
+    set streak_days = 1, last_active_at = v_today
     where id = p_user_id;
   end if;
 end;

@@ -16,18 +16,23 @@ type BannerState =
   | { kind: 'error'; title: string; detail?: string }
   | { kind: 'canceled'; title: string; detail?: string };
 
-function readCheckoutQuery(searchParams: URLSearchParams): {
+function readCheckoutQuery(
+  searchParams: URLSearchParams | Readonly<URLSearchParams> | null,
+): {
   outcome: 'success' | 'canceled' | null;
   sessionId: string | null;
   shopKind: string | null;
 } {
+  if (!searchParams) {
+    return { outcome: null, sessionId: null, shopKind: null };
+  }
   const checkout = searchParams.get('checkout');
   const legacySuccess = searchParams.get('success') === '1';
   const legacyCanceled = searchParams.get('canceled') === '1';
 
   let outcome: 'success' | 'canceled' | null = null;
-  if (checkout === 'success' || legacySuccess) outcome = 'success';
   if (checkout === 'canceled' || legacyCanceled) outcome = 'canceled';
+  else if (checkout === 'success' || legacySuccess) outcome = 'success';
 
   return {
     outcome,
@@ -36,8 +41,11 @@ function readCheckoutQuery(searchParams: URLSearchParams): {
   };
 }
 
-function stripCheckoutParams(pathname: string, searchParams: URLSearchParams): string {
-  const next = new URLSearchParams(searchParams.toString());
+function stripCheckoutParams(
+  pathname: string,
+  searchParams: URLSearchParams | Readonly<URLSearchParams> | null,
+): string {
+  const next = new URLSearchParams(searchParams?.toString() ?? '');
   for (const key of ['checkout', 'session_id', 'shop_kind', 'success', 'canceled']) {
     next.delete(key);
   }
@@ -49,6 +57,7 @@ export function CommerceCheckoutBanner() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const isGamesPage = pathname?.startsWith('/games') ?? false;
   const [banner, setBanner] = useState<BannerState>({ kind: 'idle' });
   const [dismissed, setDismissed] = useState(false);
 
@@ -63,10 +72,20 @@ export function CommerceCheckoutBanner() {
   }, [clearUrl]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (isGamesPage) {
+      setBanner({ kind: 'idle' });
+      return () => {
+        cancelled = true;
+      };
+    }
     const { outcome, sessionId, shopKind } = readCheckoutQuery(searchParams);
+
     if (!outcome) {
       setBanner({ kind: 'idle' });
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
     setDismissed(false);
@@ -77,27 +96,34 @@ export function CommerceCheckoutBanner() {
         title: '已取消付款',
         detail: '未扣款。若要購買體力或訂閱，請再試一次。',
       });
-      return;
+      return () => {
+        cancelled = true;
+      };
     }
 
-    if (!sessionId) {
-      setBanner({
-        kind: 'success',
-        title: '付款流程已完成',
-        detail:
-          shopKind === 'stamina_pack'
-            ? '若已完成扣款，請至個人資料收件匣查看體力道具並點「使用」。'
-            : '若已完成扣款，請稍後重新整理或查看訂閱狀態。',
-        inboxLink: shopKind === 'stamina_pack',
-      });
-      return;
-    }
+    const run = async () => {
+      setBanner({ kind: 'loading' });
 
-    let cancelled = false;
-    setBanner({ kind: 'loading' });
-
-    void (async () => {
       try {
+        if (!sessionId) {
+          try {
+            await fetch('/api/stripe/checkout/reconcile', { method: 'POST' });
+          } catch {
+            // ignore
+          }
+          if (cancelled) return;
+          const isStaminaLegacy = shopKind === 'stamina_pack' || shopKind == null;
+          setBanner({
+            kind: 'success',
+            title: '購買成功',
+            detail: isStaminaLegacy
+              ? '體力道具已送至個人資料收件匣，請點「使用」回復體力。'
+              : '付款已完成，感謝您的購買。',
+            inboxLink: isStaminaLegacy,
+          });
+          return;
+        }
+
         const res = await fetch('/api/stripe/checkout/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -149,12 +175,18 @@ export function CommerceCheckoutBanner() {
           json.shopItemKind === 'stamina_pack' || shopKind === 'stamina_pack';
 
         if (isStamina) {
+          if (!json.staminaDelivered) {
+            try {
+              await fetch('/api/stripe/checkout/reconcile', { method: 'POST' });
+            } catch {
+              // ignore
+            }
+          }
+          if (cancelled) return;
           setBanner({
             kind: 'success',
             title: '購買成功',
-            detail: json.staminaDelivered
-              ? `「${json.shopItemTitle ?? '體力道具'}」已送至個人資料收件匣，請點「使用」回復體力。`
-              : '付款已完成，體力道具送達中，請稍後至收件匣查看。',
+            detail: `「${json.shopItemTitle ?? '體力道具'}」已送至個人資料收件匣，請點「使用」回復體力。`,
             inboxLink: true,
           });
           return;
@@ -174,12 +206,17 @@ export function CommerceCheckoutBanner() {
           });
         }
       }
-    })();
+    };
+
+    void run();
 
     return () => {
       cancelled = true;
     };
-  }, [searchParams]);
+  }, [isGamesPage, searchParams]);
+
+  /** 遊戲頁由 GamesStaminaCheckoutToast 處理，避免頂部橫幅破版 */
+  if (isGamesPage) return null;
 
   if (dismissed || banner.kind === 'idle') return null;
 
@@ -220,9 +257,9 @@ export function CommerceCheckoutBanner() {
         {'detail' in banner && banner.detail ? (
           <p className="text-[13px] opacity-90 leading-relaxed">{banner.detail}</p>
         ) : null}
-        {banner.kind === 'success' && banner.inboxLink ? (
+        {banner.kind === 'success' && 'inboxLink' in banner && banner.inboxLink ? (
           <Link
-            href="/profile#inbox"
+            href="/profile/inbox"
             className="inline-flex items-center gap-1.5 text-[13px] font-medium underline underline-offset-2"
           >
             <Inbox className="h-3.5 w-3.5" />

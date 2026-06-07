@@ -7,7 +7,7 @@ const CONTACT_EMAIL = 'support@lingualearn.com';
 export const metadata: Metadata = {
   title: '私隱政策',
   description:
-    'LinguaLearn 私隱政策 Privacy Policy — 生效日期 2026 年 5 月 5 日，適用香港《個人資料（私隱）條例》。',
+    'Vint Platform 私隱政策 Privacy Policy — 生效日期 2026 年 5 月 5 日，適用香港《個人資料（私隱）條例》。',
 };
 
 export default function PrivacyPage() {

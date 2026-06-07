@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata: Metadata = {
   title: '服務條款',
   description:
-    'LinguaLearn 服務條款 Terms of Service — 生效日期 2026 年 5 月 5 日，適用香港法律。',
+    'Vint Platform 服務條款 Terms of Service — 生效日期 2026 年 5 月 5 日，適用香港法律。',
 };
 
 export default function TermsPage() {

@@ -2,7 +2,7 @@
 
 export const HOME_HERO = {
   eyebrow: '扎根香港 · 專為本地中小學生而設',
-  title: '幫子女學好英文，就揀 LinguaLearn',
+  title: '幫子女學好英文，就揀 Vint Platform',
   subtitle:
     '貼近香港教資、趣味學習、線上課程時間彈性；資深師資配合 AI 與線上教學，家長更易掌握子女程度',
   ctaPrimary: '即刻幫子女免費測驗',
@@ -16,7 +16,7 @@ export const HOME_STATS = [
   { value: '10,000+', label: '家庭選用' },
 ] as const;
 
-export const HOME_FEATURES_TITLE = '點解家長揀 LinguaLearn 幫子女學英文';
+export const HOME_FEATURES_TITLE = '點解家長揀 Vint Platform 幫子女學英文';
 
 /** 三欄賣點：左 4 項｜中央圖｜右 4 項（Sino-bus 風排版） */
 export const HOME_FEATURES_LEFT = [
@@ -81,7 +81,7 @@ export const HOME_TEACHERS = [
     ],
   },
   {
-    name: 'AI 英語鬥',
+    name: '英語大冒險',
     role: '趣味練習 · 提升動機',
     bio: '以遊戲化方式配合線上課程，讓子女在輕鬆氛圍中反覆練習，越玩越熟。',
     stats: [
@@ -94,7 +94,7 @@ export const HOME_TEACHERS = [
 export const HOME_TESTIMONIALS_TITLE = '家長好評回饋';
 export const HOME_TESTIMONIALS = [
   '內容貼近香港學校節奏，女兒做完快測就知道要加強閱讀，跟住線上課程補得好自然。',
-  '最鍾意可以在家學、時間自己夾；兒子話 AI 英語鬥好玩，肯主動開機練。',
+  '最鍾意可以在家學、時間自己夾；兒子話英語大冒險好玩，肯主動開機練。',
   '導師講解清楚，配合 AI 練習，唔使再周圍搵補習班試下試下。',
   '全線上彈性高，功課忙都可以排短時間重溫一課，家長都易跟進。',
 ] as const;
@@ -134,11 +134,11 @@ export const HOME_FAQ = [
   },
   {
     q: 'AI 同線上課程如何配合？',
-    a: '快測與 AI 英語鬥幫助掌握弱項與保持趣味；線上影片課程由師資系統講解，兩者互相補充。',
+    a: '快測與英語大冒險幫助掌握弱項與保持趣味；線上影片課程由師資系統講解，兩者互相補充。',
   },
   {
     q: '快測要登入嗎？',
-    a: '訪客即可開始；註冊後可保存學習紀錄，並使用完整 AI 英語鬥與課程功能。',
+    a: '訪客即可開始；註冊後可保存學習紀錄，並使用完整英語大冒險與課程功能。',
   },
   {
     q: '課程如何收費？',

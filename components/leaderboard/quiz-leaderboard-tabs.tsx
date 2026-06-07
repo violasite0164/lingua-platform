@@ -7,7 +7,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -188,7 +187,7 @@ function QuizPanel({
         <p className="text-sm text-muted-foreground rounded-md border border-dashed px-3 py-2">
           你尚未在此難度留下紀錄。前往{' '}
           <Link href="/quiz" className="text-primary underline underline-offset-2">
-            AI英語鬥
+            英語大冒險
           </Link>{' '}
           開始一局即可上榜。
         </p>
@@ -207,7 +206,7 @@ function QuizPanel({
         <p className="text-sm text-muted-foreground py-6 text-center">
           尚無紀錄。當第一位挑戰者吧 —{' '}
           <Link href="/quiz" className="text-primary underline underline-offset-2">
-            前往 AI英語鬥
+            前往英語大冒險
           </Link>
         </p>
       ) : (
@@ -250,18 +249,15 @@ export function QuizLeaderboardTabs({ quizByDifficulty, loggedIn }: Props) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Medal className="h-5 w-5 text-primary" />
-            AI英語鬥 · 各難度排行
+            英語大冒險 · 各難度排行
         </CardTitle>
-        <CardDescription>
-          先依滿分（100）場次（多者優先）；場次相同時再依加權分：時間 60%（平均每局作答愈快愈佳）＋ 平均得分 40%；仍同分則依平均每局作答秒數、平均得分依序決定。下方為各級第一名速覽，分頁內為前十名詳表。
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <QuizChampionsStrip quizByDifficulty={quizByDifficulty} />
         <Tabs defaultValue="elementary" className="w-full">
           <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-muted/80 p-1">
             {QUIZ_LEADERBOARD_LEVELS.map((lv) => (
-              <TabsTrigger key={lv.id} value={lv.id} className="flex-1 min-w-[5rem] sm:flex-none">
+              <TabsTrigger key={lv.id} value={lv.id} className="flex-1 min-w-[5.5rem] sm:flex-none">
                 {lv.short}
               </TabsTrigger>
             ))}

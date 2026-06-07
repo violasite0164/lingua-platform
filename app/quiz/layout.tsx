@@ -14,7 +14,7 @@ const pressStart2p = Press_Start_2P({
 export default function QuizLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`quiz-font-pixel ${pressStart2p.variable} ${pressStart2p.className}`}
+      className={`quiz-font-pixel quiz-disable-highlight ${pressStart2p.variable} ${pressStart2p.className}`}
     >
       {children}
     </div>

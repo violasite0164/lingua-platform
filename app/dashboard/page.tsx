@@ -11,18 +11,13 @@ import {
   Flame,
   Trophy,
   CheckCircle2,
-  Clock,
   GraduationCap,
   ArrowRight,
-  FileText,
-  Mic,
-  Video,
-  ImageIcon,
 } from 'lucide-react';
 
 import { createClient } from '@/lib/supabase/server';
 import { xpForLevel, xpToNextLevel, levelProgress } from '@/types/database.types';
-import type { AssignmentStatus, AssignmentType, CourseLevel } from '@/types/database.types';
+import type { CourseLevel } from '@/types/database.types';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge }    from '@/components/ui/badge';
@@ -34,6 +29,7 @@ import { Separator } from '@/components/ui/separator';
 import { LevelBadge } from '@/components/gamification/level-badge';
 import { XpBar }      from '@/components/gamification/xp-bar';
 import { UserNav }    from './_components/user-nav';
+import { calcCompletionRate } from '@/lib/utils';
 
 // ─── Data fetching ──────────────────────────────────────────────────────────
 
@@ -42,9 +38,8 @@ async function getDashboardData(userId: string) {
 
   const [
     { data: enrollments },
-    { data: recentAssignments },
     { count: completedCount },
-    { count: totalProgressCount },
+    { data: progressRows },
   ] = await Promise.all([
     // 已報名課程（含課程基本資訊）
     supabase
@@ -60,20 +55,6 @@ async function getDashboardData(userId: string) {
       .order('enrolled_at', { ascending: false })
       .limit(4),
 
-    // 最近 5 份作業
-    supabase
-      .from('assignments')
-      .select(`
-        id, status, submitted_at, grade, type,
-        lesson:lessons(
-          title,
-          course:courses(title)
-        )
-      `)
-      .eq('student_id', userId)
-      .order('submitted_at', { ascending: false })
-      .limit(5),
-
     // 已完成課堂數
     supabase
       .from('user_progress')
@@ -81,48 +62,47 @@ async function getDashboardData(userId: string) {
       .eq('user_id', userId)
       .eq('completed', true),
 
-    // 總觀看過的課堂數
+    // 各課程已完成課堂（透過 lessons 關聯 course_id）
     supabase
       .from('user_progress')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId),
+      .select('completed, lesson:lessons!inner(course_id)')
+      .eq('user_id', userId)
+      .eq('completed', true),
   ]);
 
+  const completedByCourse: Record<string, number> = {};
+  for (const row of progressRows ?? []) {
+    const lesson = row.lesson as { course_id: string } | null;
+    if (!lesson?.course_id) continue;
+    completedByCourse[lesson.course_id] =
+      (completedByCourse[lesson.course_id] ?? 0) + 1;
+  }
+
+  const enrolledLessonTotal = (enrollments ?? []).reduce((sum, e) => {
+    const course = e.course as { lesson_count?: number } | null;
+    return sum + (course?.lesson_count ?? 0);
+  }, 0);
+
   return {
-    enrollments:       enrollments ?? [],
-    recentAssignments: recentAssignments ?? [],
-    completedLessons:  completedCount  ?? 0,
-    totalLessons:      totalProgressCount ?? 0,
+    enrollments:      enrollments ?? [],
+    completedLessons: completedCount ?? 0,
+    totalLessons:     enrolledLessonTotal,
+    completedByCourse,
   };
 }
 
 // ─── Helper maps ────────────────────────────────────────────────────────────
 
 const LEVEL_LABELS: Record<CourseLevel, string> = {
-  beginner:     '入門',
-  intermediate: '中級',
-  advanced:     '高級',
+  beginner:     '幼兒',
+  intermediate: '小學',
+  advanced:     '中學',
 };
 
 const LEVEL_COLORS: Record<CourseLevel, string> = {
   beginner:     'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
   intermediate: 'bg-blue-100  text-blue-700  dark:bg-blue-900/30  dark:text-blue-400',
   advanced:     'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-};
-
-const STATUS_CONFIG: Record<AssignmentStatus, { label: string; color: string }> = {
-  submitted: { label: '待批改', color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
-  grading:   { label: '批改中', color: 'bg-blue-100  text-blue-700  dark:bg-blue-900/30  dark:text-blue-400'  },
-  graded:    { label: '已批改', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'  },
-  returned:  { label: '已退回', color: 'bg-red-100   text-red-700   dark:bg-red-900/30   dark:text-red-400'    },
-};
-
-const TYPE_ICON: Record<AssignmentType, React.ReactNode> = {
-  text:  <FileText className="h-3.5 w-3.5" />,
-  audio: <Mic      className="h-3.5 w-3.5" />,
-  video: <Video    className="h-3.5 w-3.5" />,
-  image: <ImageIcon className="h-3.5 w-3.5" />,
-  pdf:   <FileText className="h-3.5 w-3.5" />,
 };
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -180,8 +160,12 @@ export default async function DashboardPage() {
     );
   }
 
-  const { enrollments, recentAssignments, completedLessons, totalLessons } =
-    await getDashboardData(profile.id);
+  const {
+    enrollments,
+    completedLessons,
+    totalLessons,
+    completedByCourse,
+  } = await getDashboardData(profile.id);
 
   // XP / Level計算
   const xpPct     = Math.round(levelProgress(profile.exp, profile.level) * 100);
@@ -300,9 +284,9 @@ export default async function DashboardPage() {
             },
             {
               icon:  <GraduationCap className="h-5 w-5 text-blue-500" />,
-              label: '提交作業',
-              value: recentAssignments.length,
-              unit:  '份',
+              label: '學習完成度',
+              value: completionPct,
+              unit:  '%',
             },
             {
               icon:  <Trophy className="h-5 w-5 text-amber-500" />,
@@ -364,6 +348,13 @@ export default async function DashboardPage() {
                   } | null;
                   if (!course) return null;
 
+                  const courseCompleted = completedByCourse[course.id] ?? 0;
+                  const courseTotal = course.lesson_count || 0;
+                  const coursePct = calcCompletionRate(
+                    courseCompleted,
+                    courseTotal,
+                  );
+
                   return (
                     <Link key={i} href={`/courses/${course.id}`}>
                       <Card className="group cursor-pointer border-border/60 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
@@ -403,9 +394,9 @@ export default async function DashboardPage() {
                               )}
 
                               <div className="flex items-center gap-2">
-                                <Progress value={0} className="h-1.5 flex-1" />
+                                <Progress value={coursePct} className="h-1.5 flex-1" />
                                 <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                  0 / {course.lesson_count} 堂
+                                  {courseCompleted} / {courseTotal} 堂
                                 </span>
                               </div>
                             </div>
@@ -435,60 +426,8 @@ export default async function DashboardPage() {
             )}
           </div>
 
-          {/* Right: Assignments + Quick actions (2/5) */}
+          {/* Right: Quick actions (2/5) */}
           <div className="space-y-4 lg:col-span-2">
-
-            {/* Recent assignments */}
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">最近作業</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {recentAssignments.length === 0 ? (
-                  <div className="flex flex-col items-center py-8 text-center px-4">
-                    <Clock className="h-8 w-8 text-muted-foreground/40 mb-2" />
-                    <p className="text-xs text-muted-foreground">尚未提交任何作業</p>
-                  </div>
-                ) : (
-                  <ul className="divide-y divide-border">
-                    {recentAssignments.map((a) => {
-                      const lesson = a.lesson as {
-                        title: string;
-                        course: { title: string } | null;
-                      } | null;
-                      const statusCfg = STATUS_CONFIG[a.status as AssignmentStatus];
-
-                      return (
-                        <li key={a.id} className="flex items-start gap-3 px-4 py-3">
-                          <div className="mt-0.5 rounded-md bg-muted p-1.5 text-muted-foreground">
-                            {TYPE_ICON[a.type as AssignmentType]}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium line-clamp-1">
-                              {lesson?.title ?? '未知課堂'}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground line-clamp-1">
-                              {lesson?.course?.title ?? ''}
-                            </p>
-                            <div className="mt-1 flex items-center gap-1.5">
-                              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${statusCfg.color}`}>
-                                {statusCfg.label}
-                              </span>
-                              {a.grade != null && (
-                                <span className="text-[11px] font-semibold text-foreground">
-                                  {a.grade} 分
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </CardContent>
-            </Card>
-
             {/* Quick actions */}
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3">
@@ -524,7 +463,7 @@ export default async function DashboardPage() {
 
         {/* Footer note */}
         <p className="text-center text-xs text-muted-foreground">
-          LinguaLearn · {new Date().getFullYear()}
+          Vint Platform · {new Date().getFullYear()}
         </p>
       </div>
     </div>

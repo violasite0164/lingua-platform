@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
 import {
-  BookOpen,
   ChevronsDown,
   ChevronsUp,
   Flame,
@@ -30,9 +29,14 @@ import {
 import { LevelBadge } from '@/components/gamification/level-badge';
 import { MarketingThemeCycleButton } from '@/components/marketing-theme-cycle-button';
 import { XpBar } from '@/components/gamification/xp-bar';
+import { fetchProfileInboxUnreadCountClient } from '@/lib/profile/inbox-client';
 import { createClient } from '@/lib/supabase/client';
-import { getProfileInboxUnreadCount } from '@/lib/profile/inbox-actions';
 import type { Profile } from '@/types/database.types';
+import type {
+  ProfileSubscriptionRow,
+  SubscriptionPlanMeta,
+} from '@/lib/profile/subscription-display';
+import { PlatformBrandMark } from '@/components/layout/platform-brand-mark';
 import { Badge } from '@/components/ui/badge';
 import { useFooterVisibility } from '@/components/providers/footer-visibility-provider';
 import { GUEST_HOME_PATH } from '@/lib/site-routes';
@@ -64,14 +68,23 @@ function isNavLinkActive(pathname: string, link: (typeof NAV_LINKS)[number]): bo
 type NavbarProps = {
   /** 由 Server Component 注入，避免客戶端 session 與 cookie 不同步時誤顯示「登入」 */
   initialProfile?: Profile | null;
+  initialSubscriptions?: ProfileSubscriptionRow[];
+  initialPlanMeta?: SubscriptionPlanMeta[];
 };
 
-export function Navbar({ initialProfile = null }: NavbarProps) {
+export function Navbar({
+  initialProfile = null,
+  initialSubscriptions = [],
+  initialPlanMeta = [],
+}: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const { footerVisible, toggleFooter } = useFooterVisibility();
   const [profile, setProfile] = useState<Profile | null>(initialProfile);
+  const [subscriptions, setSubscriptions] =
+    useState<ProfileSubscriptionRow[]>(initialSubscriptions);
+  const [planMeta, setPlanMeta] = useState<SubscriptionPlanMeta[]>(initialPlanMeta);
   const [inboxUnread, setInboxUnread] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [themeMounted, setThemeMounted] = useState(false);
@@ -84,18 +97,47 @@ export function Navbar({ initialProfile = null }: NavbarProps) {
     } = await supabase.auth.getUser();
     if (error || !user) {
       setProfile(null);
+      setSubscriptions([]);
+      setPlanMeta([]);
       setInboxUnread(0);
       return;
     }
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    const [{ data }, { data: subRows }, { data: planRows }] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', user.id).single(),
+      supabase
+        .from('user_subscriptions')
+        .select('plan_code, status, current_period_end, updated_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false }),
+      supabase
+        .from('subscription_plans')
+        .select('code, title, description')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true }),
+    ]);
     if (data) setProfile(data);
+    setSubscriptions(
+      (subRows ?? []).map((row) => ({
+        plan_code: row.plan_code,
+        status: row.status,
+        current_period_end: row.current_period_end,
+        updated_at: row.updated_at,
+      })),
+    );
+    setPlanMeta(
+      (planRows ?? []).map((row) => ({
+        code: row.code,
+        title: row.title,
+        description: row.description,
+      })),
+    );
     if (data) {
-      const count = await getProfileInboxUnreadCount();
-      setInboxUnread(count);
+      try {
+        const count = await fetchProfileInboxUnreadCountClient();
+        setInboxUnread(count);
+      } catch {
+        setInboxUnread(0);
+      }
     } else {
       setInboxUnread(0);
     }
@@ -110,11 +152,21 @@ export function Navbar({ initialProfile = null }: NavbarProps) {
   }, [initialProfile]);
 
   useEffect(() => {
+    setSubscriptions(initialSubscriptions);
+  }, [initialSubscriptions]);
+
+  useEffect(() => {
+    setPlanMeta(initialPlanMeta);
+  }, [initialPlanMeta]);
+
+  useEffect(() => {
     void refreshProfile();
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session?.user) {
         setProfile(null);
+        setSubscriptions([]);
+        setPlanMeta([]);
         setInboxUnread(0);
         return;
       }
@@ -133,7 +185,12 @@ export function Navbar({ initialProfile = null }: NavbarProps) {
   useEffect(() => {
     if (!profile) return;
     if (pathname === '/profile') {
-      void getProfileInboxUnreadCount().then(setInboxUnread);
+      void fetch('/api/profile/inbox/unread', { cache: 'no-store' })
+        .then((r) => r.json())
+        .then((json: { count?: number }) =>
+          setInboxUnread(typeof json.count === 'number' ? json.count : 0),
+        )
+        .catch(() => setInboxUnread(0));
     }
   }, [pathname, profile]);
 
@@ -152,10 +209,11 @@ export function Navbar({ initialProfile = null }: NavbarProps) {
       <div className="container mx-auto flex h-14 items-center px-4">
 
         {/* Logo */}
-        <Link href={GUEST_HOME_PATH} className="flex items-center gap-2 font-bold text-lg mr-6">
-          <BookOpen className="h-5 w-5 text-primary" />
-          <span>Vint Platform</span>
-        </Link>
+        <PlatformBrandMark
+          subscriptions={subscriptions}
+          plans={planMeta}
+          className="mr-6"
+        />
 
         {/* Desktop nav links */}
         <nav className="hidden md:flex items-center gap-1 flex-1">
@@ -305,18 +363,10 @@ export function Navbar({ initialProfile = null }: NavbarProps) {
                         <User className="h-4 w-4" />
                         個人資料
                       </span>
-                      {inboxUnread > 0 ? (
-                        <Badge
-                          variant="destructive"
-                          className="h-5 min-w-5 rounded-full px-1.5 text-[10px] font-bold"
-                        >
-                          {inboxUnread > 99 ? '99+' : inboxUnread}
-                        </Badge>
-                      ) : null}
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/profile#inbox" className="flex items-center justify-between gap-2">
+                    <Link href="/profile/inbox" className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
                         <Inbox className="h-4 w-4" />
                         收件匣

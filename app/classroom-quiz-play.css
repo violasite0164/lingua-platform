@@ -1,0 +1,1238 @@
+/* 課堂測驗：16:9 影片 + 題目列 + 底部答案 + 側邊吉祥物 */
+
+.classroom-quiz-theme-shell--themed {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.classroom-quiz-theme-shell--themed .classroom-quiz-scene {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-scene {
+  background: rgba(255, 255, 255, 0.35);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-root {
+  flex: 1;
+  min-height: 0;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-stage.classroom-quiz-stage--with-answers {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: clamp(6.5rem, 20vh, 10rem);
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-column {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  max-height: min(52vh, calc(100vh - 14rem));
+  height: auto;
+}
+
+/* 答案列固定貼齊視窗底部（A/B/C/D 不被捲出畫面） */
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-answers-zone {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 15;
+  margin-top: 0;
+  flex-shrink: 0;
+  padding-left: clamp(5rem, 17vw, 10.5rem);
+  padding-right: clamp(5rem, 17vw, 10.5rem);
+  padding-bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-board {
+  width: min(100%, 640px);
+  pointer-events: auto;
+}
+
+/* 標題彩色字：避免 line-height:1 裁切字母下半（g、y 等） */
+.classroom-quiz-theme-shell--themed .quiz-bubble-title,
+.classroom-quiz-theme-shell--themed .quiz-bubble-title span {
+  line-height: 1.2;
+}
+
+/* 幼兒向：標題彩色字黑描邊略細 */
+.classroom-quiz-theme-shell--themed .quiz-bubble-title span {
+  -webkit-text-stroke: 1.5px #1a1a2e;
+  text-shadow:
+    1.5px 1.5px 0 rgba(26, 26, 46, 0.92),
+    -0.5px 0.5px 0 rgba(26, 26, 46, 0.75);
+}
+
+/* 幼兒向：影片框黑邊略細 */
+.classroom-quiz-theme-shell--themed .classroom-quiz-video-wrap {
+  border: 1px solid rgba(26, 26, 46, 0.32);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 4px 14px rgba(15, 23, 42, 0.14);
+}
+
+/* 影片區疊字（WELL DONE / NICE TRY 等）描邊略細 */
+.classroom-quiz-theme-shell--themed .classroom-quiz-outcome-announce-text,
+.classroom-quiz-theme-shell--themed .classroom-quiz-video-wrap .quiz-status-stroke-text {
+  -webkit-text-stroke: 1.5px #1a1a2e;
+  text-shadow:
+    1.5px 1.5px 0 rgba(26, 26, 46, 0.92),
+    -0.5px 0.5px 0 rgba(26, 26, 46, 0.78);
+}
+
+.classroom-quiz-mascot-static {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.classroom-quiz-mascot-img--static {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: min(42vh, 320px);
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.12));
+}
+
+/* 男女放大：寬度撐滿側欄、高度對齊（男孩素材較滿故略矮） */
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--boy .classroom-quiz-mascot-img--static {
+  width: 100%;
+  height: min(44vh, 400px);
+  max-height: min(44vh, 400px);
+  object-fit: contain;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--girl .classroom-quiz-mascot-img--static {
+  width: 100%;
+  height: min(48vh, 440px);
+  max-height: min(48vh, 440px);
+  object-fit: contain;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot-side {
+  z-index: 3;
+}
+
+.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot-side--right {
+  bottom: clamp(-20px, -2vh, -6px);
+}
+
+.classroom-quiz-header-wrap {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: min(100%, 920px);
+  margin: 0 auto 0.5rem;
+}
+
+[data-course-quiz-theme='off'] .classroom-quiz-header {
+  color: hsl(var(--muted-foreground));
+}
+
+.classroom-quiz-root {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  width: 100%;
+}
+
+.classroom-quiz-scene {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.25rem clamp(0.5rem, 4vw, 3rem) 0.5rem;
+}
+
+.classroom-quiz-scene--embedded {
+  min-height: 0;
+}
+
+/* 開場 cut-in 完成前隱藏測驗內容；完成後淡入 */
+.classroom-quiz-scene--session-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.classroom-quiz-scene--session-revealed {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 0.95s ease-out,
+    visibility 0.95s ease-out;
+}
+
+.classroom-quiz-header {
+  flex-shrink: 0;
+  width: 100%;
+  max-width: min(100%, 920px);
+  margin: 0 auto 0.35rem;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(21, 128, 61, 0.85);
+}
+
+.classroom-quiz-header--plain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.5rem;
+}
+
+.classroom-quiz-header-title {
+  min-width: 0;
+}
+
+.classroom-quiz-header-sep {
+  opacity: 0.55;
+}
+
+.classroom-quiz-header-sub-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+
+.classroom-quiz-progress-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.65rem;
+}
+
+.classroom-quiz-progress-label {
+  font-size: clamp(0.85rem, 2.6vw, 1.05rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.classroom-quiz-repeat-question-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(6, 95, 70, 0.92);
+  font-size: clamp(0.72rem, 2.2vw, 0.88rem);
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.1);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.classroom-quiz-repeat-question-btn:hover {
+  background: rgba(236, 253, 245, 0.98);
+  border-color: rgba(16, 185, 129, 0.55);
+}
+
+.classroom-quiz-repeat-question-btn__icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex-shrink: 0;
+}
+
+.classroom-quiz-repeat-question-btn__label {
+  white-space: nowrap;
+}
+
+/* 主舞台（測驗視窗：高度隨內容，不撐滿留白） */
+.classroom-quiz-stage {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: min(100%, 920px);
+  flex: 0 0 auto;
+  flex-direction: column;
+  margin: 0 auto;
+  box-sizing: border-box;
+  gap: 0.35rem;
+  justify-content: flex-start;
+}
+
+.classroom-quiz-video-column {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.classroom-quiz-video-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: #0f172a;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+}
+
+/* 題目語音：影片正下方（選擇題模式） */
+.classroom-quiz-question-audio-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 2.25rem;
+  flex-shrink: 0;
+}
+
+.classroom-quiz-question-audio-btn {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+/* 詞彙字母層啟用時：portal 高於 fullscreen 觸控層（z 45–60） */
+.classroom-quiz-question-audio-portal {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.classroom-quiz-question-audio-portal--game-fullscreen {
+  /* 座標已換算為 portal root 內的偏移；維持 absolute 填滿全螢幕容器 */
+  position: absolute;
+}
+
+.classroom-quiz-vocab-arena--frozen {
+  pointer-events: none;
+  cursor: default;
+}
+
+.classroom-quiz-question-audio-portal .classroom-quiz-question-audio-btn {
+  pointer-events: auto;
+}
+
+.classroom-quiz-video-wrap--relative {
+  position: relative;
+}
+
+.classroom-quiz-stream-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.classroom-quiz-stream-canvas,
+.classroom-quiz-stream-frame iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 1;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0;
+  pointer-events: none;
+}
+
+.classroom-quiz-stream-shield {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: default;
+  pointer-events: auto;
+}
+
+.classroom-quiz-stream-tap-play {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: clamp(1rem, 2.8vw, 1.15rem);
+  font-weight: 800;
+  color: #ffffff;
+  cursor: pointer;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+.classroom-quiz-video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+}
+
+/* 題目：疊在影片底部 */
+.classroom-quiz-question-panel {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 0.55rem;
+  width: 50%;
+  max-width: 50%;
+  transform: translateX(-50%);
+  border-radius: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  padding: 0.55rem 0.8rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+.classroom-quiz-question-panel .pointer-events-auto {
+  pointer-events: auto;
+}
+
+.classroom-quiz-question-text {
+  font-size: clamp(0.95rem, 2.6vw, 1.2rem);
+  font-weight: 700;
+  line-height: 1.4;
+  color: #fff;
+  text-align: center;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
+}
+
+.classroom-quiz-question-panel--preview {
+  opacity: 0.72;
+}
+
+/*
+ * 答題結果彈窗（課堂測驗）
+ * 尺寸：約影片寬 52%（與附圖一致），不隨垂直位置縮放
+ * 位置：僅用 padding-top 上移，勿改 width / max-height
+ */
+.classroom-quiz-video-wrap .quiz-play-popup-overlay--video {
+  z-index: 12;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16% 0.75rem 0;
+}
+
+.classroom-quiz-video-wrap .quiz-play-popup-overlay--video .quiz-play-popup-stack {
+  flex-shrink: 0;
+  width: 52%;
+  max-width: 500px;
+  max-height: none;
+}
+
+.classroom-quiz-video-wrap .quiz-play-popup-overlay--video .quiz-play-popup-stack .quiz-play-popup {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+/* 無影片：同尺寸，略偏上 */
+.classroom-quiz-stage > .quiz-play-popup-overlay--scene:not(.quiz-play-popup-overlay--video) {
+  align-items: flex-start;
+  justify-content: center;
+  padding: 14% 0.75rem 0;
+}
+
+.classroom-quiz-stage
+  > .quiz-play-popup-overlay--scene:not(.quiz-play-popup-overlay--video)
+  .quiz-play-popup-stack {
+  flex-shrink: 0;
+  width: min(52%, 500px);
+  max-height: none;
+}
+
+/* 答題結果：影片區 STAGE START 風格疊字 */
+.classroom-quiz-outcome-announce {
+  position: absolute;
+  inset: 0;
+  z-index: 14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+}
+
+.classroom-quiz-outcome-announce-text {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(1.75rem, 7vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+/* 詞彙掉落前提示：高於字母層（fullscreen z-index 45 / held 60） */
+.classroom-quiz-vocab-pickup-announce-portal {
+  position: fixed;
+  z-index: 80;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.classroom-quiz-vocab-pickup-announce-portal .classroom-quiz-outcome-announce {
+  z-index: 1;
+}
+
+.classroom-quiz-answers-zone--hidden {
+  visibility: hidden;
+  height: 0;
+  min-height: 0 !important;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.classroom-quiz-answers-zone--preview {
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.classroom-quiz-options--preview .quiz-play-opt {
+  cursor: default;
+}
+
+.classroom-quiz-answers-zone {
+  position: relative;
+  z-index: 8;
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.classroom-quiz-board {
+  position: relative;
+  z-index: 10;
+  width: min(92%, 600px);
+  flex-shrink: 0;
+  padding: 0.25rem 0 0;
+  margin-bottom: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.classroom-quiz-board-body {
+  position: relative;
+  z-index: 1;
+}
+
+.classroom-quiz-options {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.classroom-quiz-options .quiz-play-opt {
+  min-height: 5.25rem;
+  padding: 0.875rem 0.875rem;
+}
+
+.classroom-quiz-options .quiz-play-opt-badge {
+  width: 2.85rem;
+  height: 2.85rem;
+  font-size: 1.05rem;
+}
+
+@media (max-width: 520px) {
+  .classroom-quiz-options--three {
+    grid-template-columns: repeat(1, minmax(0, 1fr)) !important;
+  }
+
+  .classroom-quiz-board {
+    width: min(96%, 100%);
+  }
+
+  .classroom-quiz-question-panel {
+    width: 62%;
+    max-width: 62%;
+    bottom: 0.4rem;
+    padding: 0.45rem 0.6rem;
+  }
+
+  .classroom-quiz-question-text {
+    font-size: clamp(0.88rem, 3.2vw, 1.05rem);
+  }
+}
+
+/* 吉祥物：男左女右，腳底 fixed 貼齊視窗底部（不影響測驗區版面） */
+.classroom-quiz-mascot-side {
+  position: fixed;
+  bottom: 0;
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.classroom-quiz-mascot {
+  width: 100%;
+}
+
+.classroom-quiz-mascot-rive,
+.classroom-quiz-mascot-rive-fallback {
+  width: 100%;
+  aspect-ratio: 220 / 320;
+  height: auto;
+  min-height: clamp(110px, 20vh, 300px);
+  max-height: min(42vh, 320px);
+}
+
+.classroom-quiz-mascot-rive-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.classroom-quiz-mascot-img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.classroom-quiz-mascot-bubbles-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.classroom-quiz-mascot-bubble {
+  z-index: 36;
+  transform: translate(-50%, -100%);
+  max-width: 9rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.75rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.25;
+  background: #fff;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.classroom-quiz-mascot-bubble--boy {
+  transform: translate(0, calc(-100% - 4px));
+  margin-left: 0.25rem;
+}
+
+.classroom-quiz-mascot-bubble--girl {
+  transform: translate(-100%, calc(-100% - 4px));
+  margin-left: -0.25rem;
+}
+
+/* 思考中／答題後：較大對話氣泡（錨點在角色頭頂） */
+.classroom-quiz-mascot-bubble--large {
+  max-width: min(15rem, 42vw);
+  padding: 0.75rem 1rem;
+  font-size: clamp(0.95rem, 2.8vw, 1.2rem);
+  font-weight: 800;
+  line-height: 1.45;
+  white-space: normal;
+  text-align: left;
+  border: none;
+  border-radius: 1.15rem;
+  box-shadow:
+    0 4px 0 rgba(15, 23, 42, 0.12),
+    0 8px 20px rgba(0, 0, 0, 0.14);
+  animation: classroom-quiz-mascot-bubble-pop 0.38s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+.classroom-quiz-mascot-bubble--large.classroom-quiz-mascot-bubble--boy {
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.classroom-quiz-mascot-bubble--large.classroom-quiz-mascot-bubble--girl {
+  transform: translate(-50%, calc(-100% - 10px));
+  animation-name: classroom-quiz-mascot-bubble-pop-girl;
+}
+
+.classroom-quiz-mascot-bubble--thinking.classroom-quiz-mascot-bubble--boy {
+  border-radius: 1.15rem 1.15rem 1.15rem 0.35rem;
+  color: #0c4a6e;
+}
+
+.classroom-quiz-mascot-bubble--thinking.classroom-quiz-mascot-bubble--girl {
+  border-radius: 1.15rem 1.15rem 0.35rem 1.15rem;
+  color: #831843;
+}
+
+.classroom-quiz-mascot-bubble--outcome.classroom-quiz-mascot-bubble--boy {
+  border-radius: 1.15rem 1.15rem 1.15rem 0.35rem;
+  color: #0c4a6e;
+}
+
+.classroom-quiz-mascot-bubble--outcome.classroom-quiz-mascot-bubble--girl {
+  border-radius: 1.15rem 1.15rem 0.35rem 1.15rem;
+  color: #831843;
+}
+
+.classroom-quiz-mascot-bubble--outcome-encourage.classroom-quiz-mascot-bubble--boy {
+  color: #7c2d12;
+}
+
+.classroom-quiz-mascot-bubble--outcome-encourage.classroom-quiz-mascot-bubble--girl {
+  color: #4c1d95;
+}
+
+.classroom-quiz-mascot-bubbles-layer--outcome {
+  z-index: 46;
+}
+
+@keyframes classroom-quiz-mascot-bubble-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 2px)) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+}
+
+@keyframes classroom-quiz-mascot-bubble-pop-girl {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% - 2px)) scale(0.82);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, calc(-100% - 10px));
+  }
+}
+
+.classroom-quiz-finish {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* 進入測驗：QUIZ START / READY? 左右 cut-in */
+.classroom-quiz-intro {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.classroom-quiz-intro-cutin {
+  position: absolute;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: clamp(280px, 52vw, 640px);
+  max-height: 94%;
+  transition: transform 1.12s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.classroom-quiz-intro-cutin--boy {
+  left: 0;
+  width: clamp(250px, 46vw, 560px);
+  transform: translateX(-112%);
+}
+
+.classroom-quiz-intro-cutin--boy .classroom-quiz-intro-cutin-img {
+  max-height: min(84vh, 640px);
+}
+
+.classroom-quiz-intro-cutin--girl {
+  right: 0;
+  bottom: clamp(-40px, -4.5vh, -18px);
+  transform: translateX(112%);
+}
+
+.classroom-quiz-intro-cutin--boy.classroom-quiz-intro-cutin--in {
+  transform: translateX(-2%);
+}
+
+.classroom-quiz-intro-cutin--girl.classroom-quiz-intro-cutin--in {
+  transform: translateX(2%);
+}
+
+.classroom-quiz-intro-cutin--boy.classroom-quiz-intro-cutin--out {
+  transform: translateX(-118%);
+}
+
+.classroom-quiz-intro-cutin--girl.classroom-quiz-intro-cutin--out {
+  transform: translateX(118%);
+}
+
+.classroom-quiz-intro-cutin--boy.classroom-quiz-intro-cutin--out,
+.classroom-quiz-intro-cutin--girl.classroom-quiz-intro-cutin--out {
+  transition-duration: 0.98s;
+  transition-timing-function: cubic-bezier(0.55, 0, 0.85, 0.36);
+}
+
+.classroom-quiz-intro-cutin-img {
+  width: 100%;
+  height: auto;
+  max-height: min(92vh, 720px);
+  object-fit: contain;
+  object-position: bottom center;
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.32));
+}
+
+.classroom-quiz-intro-announce {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.classroom-quiz-intro-announce-text {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(2rem, 8.5vw, 4rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  max-width: min(92%, 680px);
+  word-break: break-word;
+}
+
+.classroom-quiz-theme-shell--themed .classroom-quiz-intro-announce-text {
+  -webkit-text-stroke: 1.5px #1a1a2e;
+  text-shadow:
+    1.5px 1.5px 0 rgba(26, 26, 46, 0.92),
+    -0.5px 0.5px 0 rgba(26, 26, 46, 0.78);
+}
+
+/* 單字模式：場景撐滿背景圖區域，字母可落到螢幕底部 */
+.classroom-quiz-scene--vocab-active {
+  position: relative;
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  min-height: min(72vh, calc(100dvh - 5.5rem));
+  overflow: visible;
+}
+
+.classroom-quiz-stage--vocab-only {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.classroom-quiz-stage--vocab-only .classroom-quiz-video-wrap {
+  flex: 1;
+  width: 100%;
+  min-height: min(58vh, 540px);
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.classroom-quiz-stage--vocab-only .classroom-quiz-question-panel {
+  z-index: 4;
+}
+
+.classroom-quiz-vocab-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+
+/* 3D 掉落：覆蓋整個測驗場景（背景圖區），題號列維持在上層可點 */
+.classroom-quiz-vocab-layer--scene {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+}
+
+.classroom-quiz-scene--vocab-active .classroom-quiz-header,
+.classroom-quiz-scene--vocab-active .classroom-quiz-header-wrap {
+  position: relative;
+  z-index: 30;
+  pointer-events: auto;
+}
+
+/* 字元模式：無舞台錨點時才覆蓋整個視窗（fallback） */
+.classroom-quiz-vocab-layer--fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  min-width: 100vw;
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100%;
+  height: 100dvh;
+  z-index: 45;
+}
+
+/* 掛在 GameShell 全螢幕容器內：用 absolute 填滿全螢幕元素 */
+.classroom-quiz-vocab-layer--game-fullscreen {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+}
+
+.classroom-quiz-vocab-arena {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.classroom-quiz-vocab-arena--can-pick {
+  cursor: grab;
+}
+
+.classroom-quiz-vocab-arena--can-pick:active {
+  cursor: grabbing;
+}
+
+/* WebGL 真 3D 字母（字元模式）：疊在投放區文字之上 */
+.classroom-quiz-vocab-three-canvas-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 22;
+  pointer-events: none;
+}
+
+.classroom-quiz-vocab-three-canvas-wrap canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.classroom-quiz-vocab-gl-recovering {
+  position: absolute;
+  inset: 0;
+  z-index: 23;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.65);
+  pointer-events: none;
+}
+
+/* 透明觸控區：對應 Three.js 字母位置 */
+.classroom-quiz-vocab-letter-hit {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  cursor: default;
+  touch-action: none;
+  pointer-events: auto;
+  z-index: 24;
+}
+
+.classroom-quiz-vocab-letter-hit--pickable {
+  cursor: grab;
+}
+
+.classroom-quiz-vocab-letter-hit--held {
+  cursor: grabbing;
+  z-index: 60;
+}
+
+.classroom-quiz-vocab-drop-zone {
+  position: absolute;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px dashed rgba(255, 236, 61, 0.85);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, 0.28);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.classroom-quiz-vocab-drop-zone-text {
+  margin: 0;
+  padding: 0 0.75rem;
+  text-align: center;
+  font-size: clamp(0.95rem, 2.6vw, 1.2rem);
+  font-weight: 800;
+  color: #ffffff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  line-height: 1.25;
+}
+
+.classroom-quiz-vocab-layer--scene .classroom-quiz-vocab-hint,
+.classroom-quiz-vocab-layer--fullscreen .classroom-quiz-vocab-hint {
+  bottom: max(0.35rem, env(safe-area-inset-bottom, 0px));
+}
+
+.classroom-quiz-vocab-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.65rem;
+  z-index: 15;
+  margin: 0;
+  width: min(92%, 420px);
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: clamp(0.72rem, 2vw, 0.88rem);
+  font-weight: 700;
+  color: #f8fafc;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+  pointer-events: none;
+}
+
+.classroom-quiz-vocab-chip {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 0.65rem;
+  border: 2px solid;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.classroom-quiz-vocab-chip--held {
+  cursor: grabbing;
+  filter: brightness(1.06);
+}
+
+.classroom-quiz-vocab-chip--shake {
+  animation: classroom-quiz-vocab-shake 0.42s ease;
+}
+
+.classroom-quiz-vocab-chip--dropped {
+  transition: transform 0.28s ease;
+}
+
+.classroom-quiz-vocab-chip-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.classroom-quiz-vocab-chip-label {
+  flex: 1;
+  min-width: 0;
+  font-size: clamp(0.78rem, 2.2vw, 0.95rem);
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.15;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.classroom-quiz-vocab-chip--card .classroom-quiz-vocab-chip-label {
+  font-size: clamp(0.78rem, 2.2vw, 0.95rem);
+}
+
+/* 字元模式：僅立體字母本體，無卡片方塊 */
+.classroom-quiz-vocab-letter-anchor {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  box-shadow: none;
+  cursor: grab;
+  touch-action: none;
+  transform-style: preserve-3d;
+  will-change: left, top, transform;
+}
+
+.classroom-quiz-vocab-letter-anchor--held {
+  cursor: grabbing;
+}
+
+.classroom-quiz-vocab-letter-anchor--dropped .classroom-quiz-vocab-letter-tilt {
+  transition: transform 0.28s ease;
+}
+
+.classroom-quiz-vocab-letter-tilt {
+  position: relative;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+/* 立體單字母：卡通圓角積木 + 大號 Fredoka */
+.classroom-quiz-letter-3d {
+  position: relative;
+  display: block;
+  width: 1.22em;
+  height: 1.18em;
+  font-size: clamp(4.5rem, 18vw, 8.5rem);
+  font-weight: 700;
+  pointer-events: none;
+  perspective: 680px;
+  perspective-origin: 50% 44%;
+}
+
+.classroom-quiz-letter-3d--brick {
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.22));
+}
+
+.classroom-quiz-letter-3d__contact-shadow {
+  position: absolute;
+  left: 50%;
+  top: 92%;
+  z-index: 0;
+  width: 1.2em;
+  height: 0.36em;
+  transform: translate(-50%, -30%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(0, 0, 0, 0.35) 0%,
+    transparent 70%
+  );
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.classroom-quiz-letter-3d__rig {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(14deg) rotateY(-12deg);
+}
+
+/* 單層啞光圓角積木墊（在字母後方，非肥皂光澤） */
+.classroom-quiz-letter-3d__brick-pad {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  z-index: 1;
+  width: 0.82em;
+  height: 0.5em;
+  transform: translate(-50%, -50%) translateZ(-8px);
+  border-radius: 0.22em;
+  border: 0.04em solid rgba(0, 0, 0, 0.08);
+  pointer-events: none;
+}
+
+.classroom-quiz-letter-3d__glyph-stack {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+.classroom-quiz-letter-3d__layer {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform-style: preserve-3d;
+  font-family: inherit;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  -webkit-text-stroke-width: 0.09em;
+  -webkit-text-stroke-linejoin: round;
+  paint-order: stroke fill;
+  -webkit-text-fill-color: currentColor;
+  user-select: none;
+  margin: 0;
+}
+
+.classroom-quiz-letter-3d__layer--depth {
+  opacity: 0.88;
+}
+
+.classroom-quiz-letter-3d__layer--face {
+  z-index: 2;
+  text-shadow:
+    0 0.05em 0 rgba(255, 255, 255, 0.5),
+    0 0.12em 0.08em rgba(0, 0, 0, 0.18);
+}
+
+.classroom-quiz-vocab-chip-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px rgba(255, 236, 61, 0.55);
+  pointer-events: none;
+}
+
+@keyframes classroom-quiz-vocab-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
+}

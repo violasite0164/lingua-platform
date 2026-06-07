@@ -154,6 +154,8 @@ export interface Database {
           price:         number;
           is_free:       boolean;
           is_published:  boolean;
+          sub_basic_free: boolean;
+          sub_pro_free:   boolean;
           lesson_count:  number;
           student_count: number;
           created_at:    string;
@@ -170,6 +172,8 @@ export interface Database {
           price?:        number;
           is_free?:      boolean;
           is_published?: boolean;
+          sub_basic_free?: boolean;
+          sub_pro_free?:   boolean;
           lesson_count?: number;
           student_count?: number;
           created_at?:   string;
@@ -186,6 +190,8 @@ export interface Database {
           price?:        number;
           is_free?:      boolean;
           is_published?: boolean;
+          sub_basic_free?: boolean;
+          sub_pro_free?:   boolean;
           updated_at?:   string;
         };
         Relationships: [
@@ -216,6 +222,8 @@ export interface Database {
           cf_thumbnail_url: string | null;
           duration_sec:    number;
           is_preview:      boolean;
+          sub_basic_free:  boolean | null;
+          sub_pro_free:    boolean | null;
           xp_reward:       number;
           created_at:      string;
           updated_at:      string;
@@ -230,6 +238,8 @@ export interface Database {
           cf_thumbnail_url?: string | null;
           duration_sec?:   number;
           is_preview?:     boolean;
+          sub_basic_free?: boolean | null;
+          sub_pro_free?:   boolean | null;
           xp_reward?:      number;
           created_at?:     string;
           updated_at?:     string;
@@ -244,6 +254,8 @@ export interface Database {
           cf_thumbnail_url?: string | null;
           duration_sec?:   number;
           is_preview?:     boolean;
+          sub_basic_free?: boolean | null;
+          sub_pro_free?:   boolean | null;
           xp_reward?:      number;
           updated_at?:     string;
         };
@@ -412,6 +424,8 @@ export interface Database {
           require_to_complete_course:  boolean;
           xp_reward:                   number;
           is_published:                boolean;
+          sub_basic_free:              boolean | null;
+          sub_pro_free:                boolean | null;
           sort_order:                  number;
           created_at:                  string;
           updated_at:                  string;
@@ -431,6 +445,8 @@ export interface Database {
           require_to_complete_course?: boolean;
           xp_reward?:                  number;
           is_published?:               boolean;
+          sub_basic_free?:             boolean | null;
+          sub_pro_free?:               boolean | null;
           sort_order?:                 number;
           created_at?:                 string;
           updated_at?:                 string;
@@ -448,6 +464,8 @@ export interface Database {
           require_to_complete_course?:  boolean;
           xp_reward?:                  number;
           is_published?:               boolean;
+          sub_basic_free?:             boolean | null;
+          sub_pro_free?:               boolean | null;
           sort_order?:                 number;
           updated_at?:                 string;
         };
@@ -679,6 +697,64 @@ export interface Database {
         ];
       };
 
+      // ── subscription_plan_gifts ────────────────────────
+      subscription_plan_gifts: {
+        Row: {
+          plan_code: string;
+          shop_item_id: string;
+          quantity: number;
+          created_at: string;
+        };
+        Insert: {
+          plan_code: string;
+          shop_item_id: string;
+          quantity?: number;
+          created_at?: string;
+        };
+        Update: {
+          plan_code?: string;
+          shop_item_id?: string;
+          quantity?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'subscription_plan_gifts_plan_code_fkey';
+            columns: ['plan_code'];
+            referencedRelation: 'subscription_plans';
+            referencedColumns: ['code'];
+          },
+          {
+            foreignKeyName: 'subscription_plan_gifts_shop_item_id_fkey';
+            columns: ['shop_item_id'];
+            referencedRelation: 'shop_items';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+
+      subscription_gift_deliveries: {
+        Row: {
+          id: string;
+          user_id: string;
+          plan_code: string;
+          shop_item_id: string;
+          stripe_subscription_id: string;
+          delivered_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          plan_code: string;
+          shop_item_id: string;
+          stripe_subscription_id: string;
+          delivered_at?: string;
+        };
+        Update: {
+          delivered_at?: string;
+        };
+        Relationships: [];
+      };
+
       // ── subscription_plans ─────────────────────────────
       subscription_plans: {
         Row: {
@@ -690,6 +766,7 @@ export interface Database {
           currency: string;
           stripe_price_id: string | null;
           is_active: boolean;
+          free_play_games: boolean;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -703,6 +780,7 @@ export interface Database {
           currency?: string;
           stripe_price_id?: string | null;
           is_active?: boolean;
+          free_play_games?: boolean;
           sort_order?: number;
           created_at?: string;
           updated_at?: string;
@@ -715,6 +793,7 @@ export interface Database {
           currency?: string;
           stripe_price_id?: string | null;
           is_active?: boolean;
+          free_play_games?: boolean;
           sort_order?: number;
           updated_at?: string;
         };
@@ -1423,6 +1502,34 @@ export interface Database {
         };
         Returns: Json;
       };
+      get_game_stamina: {
+        Args: Record<string, never>;
+        Returns: Json;
+      };
+      spend_game_stamina: {
+        Args: { p_amount: number };
+        Returns: Json;
+      };
+      grant_game_stamina: {
+        Args: { p_amount: number };
+        Returns: Json;
+      };
+      begin_game_play_session: {
+        Args: { p_difficulty: string; p_charge_kind: string };
+        Returns: Json;
+      };
+      assert_game_play_session: {
+        Args: { p_session_id: string; p_difficulty: string };
+        Returns: Json;
+      };
+      consume_game_play_session: {
+        Args: { p_session_id: string };
+        Returns: Json;
+      };
+      issue_game_advance_grant: {
+        Args: { p_target_difficulty: string; p_source_difficulty?: string | null };
+        Returns: Json;
+      };
     };
 
     Enums: {
@@ -1485,6 +1592,11 @@ export interface CourseWithTeacher extends Course {
   category: Category | null;
 }
 
+/** 課程總覽卡片（含是否已購／報名） */
+export interface CourseCatalogItem extends CourseWithTeacher {
+  is_enrolled: boolean;
+}
+
 export interface LessonWithProgress extends Lesson {
   progress: UserProgress | null;
 }
@@ -1503,6 +1615,8 @@ export interface CourseWithLessons extends CourseWithTeacher {
   lessons: LessonWithProgress[];
   quizzes: CourseQuizWithProgress[];
   is_enrolled: boolean;
+  /** 目前登入使用者的有效訂閱層級（未登入為 free） */
+  subscription_tier: import('@/lib/profile/subscription-display').SubscriptionTier;
 }
 
 export type CourseRoadmapItem =

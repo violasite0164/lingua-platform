@@ -2,7 +2,12 @@
  * 導師後台資料查詢（Server Components）
  */
 import { createClient } from '@/lib/supabase/server';
-import type { Tables } from '@/types/database.types';
+import type {
+  CourseQuiz,
+  CourseQuizQuestion,
+  CourseQuizStep,
+  Tables,
+} from '@/types/database.types';
 
 export type MentorCourseRow = Tables<'courses'> & {
   category: { id: number; name: string; slug: string } | null;
@@ -40,28 +45,20 @@ export async function getMentorDashboardStats(mentorId: string) {
   >[];
 
   const courseIds = courses.map((c) => c.id);
-  let pendingAssignments = 0;
+  let totalCourseQuizzes = 0;
+  let draftCourseQuizzes = 0;
 
   if (courseIds.length > 0) {
-    const { data: lessonRowsRaw } = await supabase
-      .from('lessons')
-      .select('id')
+    const { data: quizRows, error: qErr } = await supabase
+      .from('course_quizzes')
+      .select('id, is_published')
       .in('course_id', courseIds);
 
-    const lessonRows = (lessonRowsRaw ?? []) as Pick<Tables<'lessons'>, 'id'>[];
+    if (qErr) throw qErr;
 
-    const lessonIds = lessonRows.map((l) => l.id);
-
-    if (lessonIds.length > 0) {
-      const { count, error: aErr } = await supabase
-        .from('assignments')
-        .select('*', { count: 'exact', head: true })
-        .in('lesson_id', lessonIds)
-        .in('status', ['submitted', 'grading']);
-
-      if (aErr) throw aErr;
-      pendingAssignments = count ?? 0;
-    }
+    const rows = quizRows ?? [];
+    totalCourseQuizzes = rows.length;
+    draftCourseQuizzes = rows.filter((q) => !q.is_published).length;
   }
 
   const totalCourses = courses.length;
@@ -72,8 +69,50 @@ export async function getMentorDashboardStats(mentorId: string) {
     totalCourses,
     totalStudents,
     totalLessons,
-    pendingAssignments,
+    totalCourseQuizzes,
+    draftCourseQuizzes,
   };
+}
+
+export type MentorCourseQuizSummary = MentorCourseRow & {
+  quiz_count: number;
+  draft_quiz_count: number;
+};
+
+export async function getMentorCoursesQuizSummary(
+  mentorId: string,
+): Promise<MentorCourseQuizSummary[]> {
+  const courses = await getMentorCourses(mentorId);
+  const courseIds = courses.map((c) => c.id);
+
+  if (courseIds.length === 0) return [];
+
+  const supabase = await createClient();
+  const { data: quizRows, error } = await supabase
+    .from('course_quizzes')
+    .select('id, course_id, is_published')
+    .in('course_id', courseIds);
+
+  if (error) throw error;
+
+  const countByCourse = new Map<string, { total: number; draft: number }>();
+  for (const id of courseIds) {
+    countByCourse.set(id, { total: 0, draft: 0 });
+  }
+  for (const q of quizRows ?? []) {
+    const entry = countByCourse.get(q.course_id)!;
+    entry.total += 1;
+    if (!q.is_published) entry.draft += 1;
+  }
+
+  return courses.map((course) => {
+    const counts = countByCourse.get(course.id) ?? { total: 0, draft: 0 };
+    return {
+      ...course,
+      quiz_count: counts.total,
+      draft_quiz_count: counts.draft,
+    };
+  });
 }
 
 export async function getMentorCourseForEdit(courseId: string, mentorId: string) {
@@ -106,34 +145,59 @@ export async function getMentorCourseForEdit(courseId: string, mentorId: string)
   };
 }
 
-export type MentorAssignmentRow = Tables<'assignments'> & {
-  student: Pick<Tables<'profiles'>, 'id' | 'display_name' | 'avatar_url'> | null;
-  lesson:
-    | (Pick<Tables<'lessons'>, 'id' | 'title'> & {
-        course: Pick<Tables<'courses'>, 'id' | 'title' | 'teacher_id'>;
-      })
-    | null;
-};
+export async function getMentorCourseQuizzesForEdit(
+  courseId: string,
+  mentorId: string,
+) {
+  const pack = await getMentorCourseForEdit(courseId, mentorId);
+  if (!pack) return null;
 
-export async function getMentorAssignmentsQueue(mentorId: string): Promise<MentorAssignmentRow[]> {
   const supabase = await createClient();
+  const { data: quizzes } = await supabase
+    .from('course_quizzes')
+    .select('*')
+    .eq('course_id', courseId)
+    .order('sort_order', { ascending: true });
 
-  const { data, error } = await supabase
-    .from('assignments')
-    .select(`
-      *,
-      student:profiles!assignments_student_id_fkey(id, display_name, avatar_url),
-      lesson:lessons(
-        id,
-        title,
-        course:courses(id, title, teacher_id)
-      )
-    `)
-    .in('status', ['submitted', 'grading'])
-    .order('submitted_at', { ascending: true });
+  const quizIds = (quizzes ?? []).map((q) => q.id);
+  let quizQuestions: CourseQuizQuestion[] = [];
+  let quizSteps: CourseQuizStep[] = [];
+  if (quizIds.length > 0) {
+    const { data: qRows } = await supabase
+      .from('course_quiz_questions')
+      .select('*')
+      .in('quiz_id', quizIds)
+      .order('sort_order', { ascending: true });
+    quizQuestions = (qRows ?? []) as CourseQuizQuestion[];
 
-  if (error) throw error;
+    const { data: sRows } = await supabase
+      .from('course_quiz_steps')
+      .select('*')
+      .in('quiz_id', quizIds)
+      .order('sort_order', { ascending: true });
+    quizSteps = (sRows ?? []) as CourseQuizStep[];
 
-  const rows = (data ?? []) as MentorAssignmentRow[];
-  return rows.filter((r) => r.lesson?.course?.teacher_id === mentorId);
+    const { ensureCourseQuizQuestionSteps } = await import(
+      '@/lib/course-quiz/ensure-quiz-steps'
+    );
+    for (const quiz of quizzes ?? []) {
+      const qForQuiz = quizQuestions.filter((q) => q.quiz_id === quiz.id);
+      await ensureCourseQuizQuestionSteps(supabase, quiz.id, qForQuiz);
+    }
+
+    const { data: sRowsAfter } = await supabase
+      .from('course_quiz_steps')
+      .select('*')
+      .in('quiz_id', quizIds)
+      .order('sort_order', { ascending: true });
+    quizSteps = (sRowsAfter ?? []) as CourseQuizStep[];
+  }
+
+  return {
+    ...pack,
+    quizzes: (quizzes ?? []) as CourseQuiz[],
+    quizQuestions,
+    quizSteps,
+  };
 }
+

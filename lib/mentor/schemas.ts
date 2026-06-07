@@ -24,6 +24,9 @@ export const lessonFormSchema = z.object({
   description: z.string().max(20000).optional().nullable(),
   is_preview: z.boolean(),
   xp_reward: z.coerce.number().int().min(0).max(1000),
+  sub_access_override: z.boolean().optional(),
+  sub_basic_free: z.boolean().optional(),
+  sub_pro_free: z.boolean().optional(),
 });
 
 export type LessonFormValues = z.infer<typeof lessonFormSchema>;

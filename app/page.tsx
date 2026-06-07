@@ -8,7 +8,7 @@ import { getCurrentUser, getPublishedCourses } from '@/lib/supabase/queries';
 export const metadata: Metadata = {
   title: '首頁',
   description:
-    'LinguaLearn — 扎根香港，貼近教資；趣味線上課程、AI 輔助與資深師資，家長可為子女安排免費快測',
+    'Vint Platform — 扎根香港，貼近教資；趣味線上課程、AI 輔助與資深師資，家長可為子女安排免費快測',
 };
 
 /** 依登入狀態載入推薦課程（SSR） */

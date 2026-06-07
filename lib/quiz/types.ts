@@ -1,4 +1,8 @@
-import type { QuizDifficultyLevel } from '@/types/database.types';
+import type { QuizCinemaConfig } from '@/lib/quiz-game-config';
+import type {
+  QuizDifficultyLevel,
+  QuizEditorPersonality,
+} from '@/types/database.types';
 
 /** 客戶端一輪遊戲使用的題目（由 Server Action 回傳） */
 export type QuizQuestionPayload = {
@@ -26,6 +30,10 @@ export type QuizBootstrap = {
   questionCounts: Partial<Record<QuizDifficultyLevel, number>>;
   /** 僅管理員可取得／顯示題庫題數 */
   showQuestionBankCounts: boolean;
+  /** AI小編風格；null 表示尚未選擇 */
+  quizEditorPersonality: QuizEditorPersonality | null;
+  /** 開局／過關影片（來自 homepage_config） */
+  cinema: QuizCinemaConfig;
 };
 
 /** `recordQuizSession()` 回傳 */

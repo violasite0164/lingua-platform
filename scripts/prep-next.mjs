@@ -5,7 +5,7 @@
  *
  * `app-paths-manifest.json` 僅在缺檔時建立（避免覆寫實體 App Router 對照而導致 chunk ENOENT）。
  * `middleware-manifest.json` 僅在**缺檔**時建立（不覆寫 Turbopack 的 edge chunk 對照）。其餘內建 pages
- * 虛擬路由目錄下 JSON、以及 `static/development` 的 build manifest _seed 則**每次**寫入。
+ * 虛擬路由目錄下 JSON、以及 `static/development` 的 build manifest _seed 則**僅缺檔時**寫入。
  *
  * Set NEXT_DEV_TURBOPACK=1 when using `next dev --turbopack`:
  * - Do not write the Webpack-only pages/_document.js stub.
@@ -44,6 +44,8 @@ import {
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
+import { writeDistManifestSkeletonsIfMissing } from './next-dist-manifest-skeleton.mjs';
+
 const turbopack = process.env.NEXT_DEV_TURBOPACK === '1';
 
 /** 專案根（指令檔所在目錄上一層），勿用 `process.cwd()` — IDE 可能在錯誤 cwd 下跑 npm/script。 */
@@ -56,6 +58,8 @@ mkdirSync(serverDir, { recursive: true });
 mkdirSync(pagesDir, { recursive: true });
 mkdirSync(join(serverDir, 'edge'), { recursive: true });
 mkdirSync(staticDevDir, { recursive: true });
+
+writeDistManifestSkeletonsIfMissing(root);
 
 /**
  * Turbopack dev：刪除會綁定 `[turbopack]_runtime` 的 pages 根目錄 bundle，強制乾淨重編。
@@ -109,7 +113,10 @@ const staticDevSeeds = [
   ['_ssgManifest.js', emptySsgManifestJs],
 ];
 for (const [name, content] of staticDevSeeds) {
-  writeFileSync(join(staticDevDir, name), content);
+  const seedPath = join(staticDevDir, name);
+  if (!existsSync(seedPath)) {
+    writeFileSync(seedPath, content);
+  }
 }
 
 /** 僅缺檔時建立 — 勿覆寫 Turbopack 已寫入的 manifest（內含 edge chunk 路徑），否則可能與磁碟 chunk 不一致→ ENOENT。 */
@@ -122,7 +129,12 @@ mkdirSync(join(serverDir, 'edge', 'chunks'), { recursive: true });
 
 writeVirtualPagesManifestStubs();
 
-writeAppRouterPartialManifestStubs();
+// 勿在 Webpack dev 啟動前寫 `server/app/…/page/app-build-manifest.json` 骨架：
+// Next 會誤判路由已編譯，導致 `page.js` 永不輸出 → MODULE_NOT_FOUND。
+// Turbopack 若需此骨架，設 NEXT_PREP_APP_ROUTER_STUBS=1。
+if (process.env.NEXT_PREP_APP_ROUTER_STUBS === '1') {
+  writeAppRouterPartialManifestStubs();
+}
 
 const createIfMissingOnly = {
   'app-paths-manifest.json': {},
@@ -183,7 +195,10 @@ function writeAppRouterPartialManifestStubs() {
 
   function seedRouteManifestDir(manifestDir) {
     mkdirSync(manifestDir, { recursive: true });
-    writeFileSync(join(manifestDir, 'app-build-manifest.json'), emptyAppBuild);
+    const manifestPath = join(manifestDir, 'app-build-manifest.json');
+    if (!existsSync(manifestPath)) {
+      writeFileSync(manifestPath, emptyAppBuild);
+    }
   }
 
   function walk(dir, parts) {
@@ -206,7 +221,7 @@ function writeAppRouterPartialManifestStubs() {
 }
 
 /**
- * 見檔案頂部說明。內建 pages 虛擬路由：每跑必寫四個 JSON。
+ * 見檔案頂部說明。內建 pages 虛擬路由：僅缺檔時寫四個 JSON。
  */
 function writeVirtualPagesManifestStubs() {
   const virtual = [
@@ -238,13 +253,15 @@ function writeVirtualPagesManifestStubs() {
     };
     for (const [fn, content] of Object.entries(files)) {
       const p = join(d, fn);
-      writeFileSync(p, JSON.stringify(content, null, 2));
+      if (!existsSync(p)) {
+        writeFileSync(p, JSON.stringify(content, null, 2));
+      }
     }
   }
 }
 
 const summaryParts = [
-  'middleware if missing + App/pages stubs + static/development seeds',
+  'routes-manifest if missing + middleware if missing + pages stubs + static/development seeds',
 ];
 if (clearedTurbopackRootBundles > 0) {
   summaryParts.push(

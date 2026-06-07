@@ -21,7 +21,7 @@ const PAGES = [
   '/mentor',
   '/mentor/courses',
   '/mentor/courses/new',
-  '/mentor/assignments',
+  '/mentor/course-quizzes',
 ];
 
 const MAX_RETRIES    = 10;

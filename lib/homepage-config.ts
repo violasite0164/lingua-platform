@@ -13,7 +13,9 @@ import {
   HOME_QUIZ_INTRO_MAX_LEN,
   normalizeHexColor,
   normalizeHomepageQuizCopy,
+  parseBackgroundImageUrlsFromDb,
   parseOverlayOpacityFromDb,
+  pickRandomBackgroundImageUrl,
   resolveTeachersCardImageUrls,
   type HomeBackdropMedia,
   type HomepagePublicSettings,
@@ -30,8 +32,13 @@ export type {
 export { normalizeHexColor, parseOverlayOpacityFromDb } from '@/lib/homepage-public';
 
 function rowToMedia(row: HomepageConfig): HomeBackdropMedia {
+  const imageUrls = parseBackgroundImageUrlsFromDb(
+    row.background_image_urls,
+    row.background_image_url,
+  );
   return {
-    imageUrl: row.background_image_url?.trim() || null,
+    imageUrl: pickRandomBackgroundImageUrl(imageUrls),
+    imageUrls,
     videoUrl: row.background_video_url?.trim() || null,
     imageEnabled: row.background_image_enabled ?? true,
     videoEnabled: row.background_video_enabled ?? true,

@@ -7,6 +7,12 @@ import type { TablesInsert, TablesUpdate } from '@/types/database.types';
 
 import { requireMentor } from '@/lib/mentor/auth';
 import {
+  buildStreamThumbnailUrl,
+  isStreamDerivedThumbnailUrl,
+  persistCourseThumbnailFromStream,
+} from '@/lib/mentor/stream-thumbnail';
+import { revalidateCourseAccessPaths } from '@/lib/courses/revalidate-access';
+import {
   createCourseFormSchema,
   DEFAULT_LESSON_XP_REWARD,
   lessonFormSchema,
@@ -120,6 +126,8 @@ export async function createCourseFormAction(
     is_published: v.is_published,
     level: v.level,
     category_id: v.category_id ?? null,
+    sub_basic_free: formData.get('sub_basic_free') === 'on',
+    sub_pro_free: formData.get('sub_pro_free') === 'on',
   };
 
   const { data: course, error } = await supabase
@@ -193,6 +201,8 @@ export async function updateCourseFormAction(
     is_published: v.is_published,
     level: v.level,
     category_id: v.category_id ?? null,
+    sub_basic_free: formData.get('sub_basic_free') === 'on',
+    sub_pro_free: formData.get('sub_pro_free') === 'on',
   };
 
   const { error } = await supabase.from('courses').update(upd).eq('id', v.id);
@@ -218,6 +228,7 @@ export async function updateCourseFormAction(
   }
 
   safeRevalidate('/mentor/courses', `/mentor/courses/${v.id}/edit`);
+  revalidateCourseAccessPaths(v.id);
   return { success: '課程已更新' };
 }
 
@@ -272,11 +283,14 @@ export async function updateLessonAction(
   const supabase = await createClient();
   const v = parsed.data;
 
+  const subOverride = v.sub_access_override === true;
   const upd: TablesUpdate<'lessons'> = {
     title: v.title,
     description: v.description ?? null,
     is_preview: v.is_preview,
     xp_reward: v.xp_reward,
+    sub_basic_free: subOverride ? (v.sub_basic_free ?? false) : null,
+    sub_pro_free: subOverride ? (v.sub_pro_free ?? false) : null,
   };
 
   const { data: lesson } = await supabase
@@ -294,52 +308,129 @@ export async function updateLessonAction(
 
   if (lesson?.course_id) {
     safeRevalidate(`/mentor/courses/${lesson.course_id}/edit`);
+    revalidateCourseAccessPaths(lesson.course_id);
   }
   return { success: '單元已儲存' };
 }
 
 export async function deleteCourseAction(courseId: string): Promise<ActionState> {
-  const profile = await requireMentor();
-  await assertCourseOwner(courseId, profile);
+  try {
+    const profile = await requireMentor();
+    await assertCourseOwner(courseId, profile);
 
-  const supabase = await createClient();
+    const supabase = await createClient();
 
-  // Delete all lessons first (cascade may not be set)
-  await supabase.from('lessons').delete().eq('course_id', courseId);
+    const { error: enrollErr } = await supabase
+      .from('enrollments')
+      .delete()
+      .eq('course_id', courseId);
+    if (enrollErr) {
+      console.error('[deleteCourse] enrollments', enrollErr);
+      return { error: `無法清除學員報名：${enrollErr.message}` };
+    }
 
-  const { error } = await supabase.from('courses').delete().eq('id', courseId);
+    const { error: lessonsErr } = await supabase
+      .from('lessons')
+      .delete()
+      .eq('course_id', courseId);
+    if (lessonsErr) {
+      console.error('[deleteCourse] lessons', lessonsErr);
+      return { error: `無法刪除單元：${lessonsErr.message}` };
+    }
 
-  if (error) {
-    console.error('[deleteCourse]', error);
-    return { error: error.message };
+    const { error } = await supabase.from('courses').delete().eq('id', courseId);
+    if (error) {
+      console.error('[deleteCourse] course', error);
+      return { error: error.message };
+    }
+
+    safeRevalidate('/mentor', '/mentor/courses');
+    return { success: '已刪除課程', redirect: '/mentor/courses' };
+  } catch (e) {
+    if (e && typeof e === 'object' && 'digest' in e) throw e;
+    console.error('[deleteCourseAction]', e);
+    return {
+      error: e instanceof Error ? e.message : '刪除課程失敗，請稍後再試',
+    };
   }
-
-  safeRevalidate('/mentor', '/mentor/courses');
-  return { success: '已刪除課程', redirect: '/mentor/courses' };
 }
 
 export async function deleteLessonAction(lessonId: string): Promise<ActionState> {
-  const profile = await requireMentor();
-  await assertLessonOwner(lessonId, profile);
+  try {
+    const profile = await requireMentor();
+    await assertLessonOwner(lessonId, profile);
 
-  const supabase = await createClient();
-  const { data: lesson } = await supabase
-    .from('lessons')
-    .select('course_id')
-    .eq('id', lessonId)
-    .single();
+    const supabase = await createClient();
+    const { data: lesson, error: fetchErr } = await supabase
+      .from('lessons')
+      .select('course_id')
+      .eq('id', lessonId)
+      .maybeSingle();
 
-  const { error } = await supabase.from('lessons').delete().eq('id', lessonId);
+    if (fetchErr || !lesson) {
+      return { error: '找不到單元' };
+    }
 
-  if (error) {
-    console.error('[deleteLesson]', error);
-    return { error: error.message };
-  }
+    const { error: assignmentsErr } = await supabase
+      .from('assignments')
+      .delete()
+      .eq('lesson_id', lessonId);
+    if (assignmentsErr) {
+      console.error('[deleteLesson] assignments', assignmentsErr);
+      return { error: `無法刪除作業：${assignmentsErr.message}` };
+    }
 
-  if (lesson?.course_id) {
+    const { error: progressErr } = await supabase
+      .from('user_progress')
+      .delete()
+      .eq('lesson_id', lessonId);
+    if (progressErr) {
+      console.error('[deleteLesson] user_progress', progressErr);
+      return { error: `無法刪除學習進度：${progressErr.message}` };
+    }
+
+    const { error: commentsErr } = await supabase
+      .from('comments')
+      .delete()
+      .eq('lesson_id', lessonId);
+    if (commentsErr) {
+      console.error('[deleteLesson] comments', commentsErr);
+      return { error: `無法刪除留言：${commentsErr.message}` };
+    }
+
+    const { error: textbooksErr } = await supabase
+      .from('lesson_textbooks')
+      .delete()
+      .eq('lesson_id', lessonId);
+    if (textbooksErr) {
+      console.error('[deleteLesson] lesson_textbooks', textbooksErr);
+      return { error: `無法刪除教材：${textbooksErr.message}` };
+    }
+
+    const { error: cuesErr } = await supabase
+      .from('lesson_timed_cues')
+      .delete()
+      .eq('lesson_id', lessonId);
+    if (cuesErr) {
+      console.error('[deleteLesson] lesson_timed_cues', cuesErr);
+      return { error: `無法刪除即時互動：${cuesErr.message}` };
+    }
+
+    const { error } = await supabase.from('lessons').delete().eq('id', lessonId);
+    if (error) {
+      console.error('[deleteLesson] lesson', error);
+      return { error: error.message };
+    }
+
     safeRevalidate(`/mentor/courses/${lesson.course_id}/edit`);
+    return { success: '已刪除單元' };
+  } catch (e) {
+    if (e && typeof e === 'object' && 'digest' in e) throw e;
+    console.error('[deleteLessonAction]', e);
+    return {
+      error: e instanceof Error ? e.message : '刪除單元失敗，請稍後再試',
+    };
   }
-  return { success: '已刪除單元' };
 }
 
 export async function saveLessonVideoUidAction(
@@ -382,86 +473,104 @@ export async function saveLessonVideoUidAction(
 }
 
 async function syncLessonStreamMetaInternal(lessonId: string) {
-  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-  const token = process.env.CLOUDFLARE_STREAM_API_TOKEN;
-  if (!accountId || !token) return;
-
   const supabase = await createClient();
   const { data: lesson } = await supabase
     .from('lessons')
-    .select('cf_video_uid, course_id, sort_order')
+    .select('cf_video_uid, course_id')
     .eq('id', lessonId)
     .single();
 
   if (!lesson?.cf_video_uid) return;
 
-  // ── Fetch metadata from Cloudflare Stream API ──────────────
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+  const token = process.env.CLOUDFLARE_STREAM_API_TOKEN;
+
+  // ── Fetch metadata from Cloudflare Stream API (optional) ─────
   let duration = 0;
-  let cfThumb: string | null = null;
+  let apiThumb: string | null = null;
 
-  try {
-    const res = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${lesson.cf_video_uid}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
+  if (accountId && token) {
+    try {
+      const res = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/${lesson.cf_video_uid}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-    const json = (await res.json()) as {
-      success?: boolean;
-      result?: { duration?: number; thumbnail?: string; preview?: string };
-    };
+      const json = (await res.json()) as {
+        success?: boolean;
+        result?: { duration?: number; thumbnail?: string; preview?: string };
+      };
 
-    if (json.success && json.result) {
-      duration = Math.round(json.result.duration ?? 0);
-      cfThumb   = json.result.thumbnail ?? json.result.preview ?? null;
+      if (json.success && json.result) {
+        duration = Math.round(json.result.duration ?? 0);
+        apiThumb = json.result.thumbnail ?? json.result.preview ?? null;
+      }
+    } catch {
+      // Non-fatal: video may still be processing.
     }
-  } catch {
-    // Non-fatal: video may still be processing — skip duration/thumb sync.
   }
 
-  // If Stream API didn't return a thumbnail, build the URL directly.
-  // Cloudflare thumbnail URLs work immediately after upload.
-  if (!cfThumb) {
-    const subdomain = process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_CUSTOMER_SUBDOMAIN;
-    cfThumb = subdomain
-      ? `https://${subdomain}/${lesson.cf_video_uid}/thumbnails/thumbnail.jpg?time=5s&fit=crop&width=640`
-      : `https://videodelivery.net/${lesson.cf_video_uid}/thumbnails/thumbnail.jpg?time=5s&fit=crop&width=640`;
-  }
+  const cfThumb = apiThumb ?? buildStreamThumbnailUrl(lesson.cf_video_uid);
 
-  // ── Update lesson ──────────────────────────────────────────
-  await supabase
+  const lessonUpdate: TablesUpdate<'lessons'> = { cf_thumbnail_url: cfThumb };
+  if (duration > 0) lessonUpdate.duration_sec = duration;
+
+  const { error: lessonErr } = await supabase
     .from('lessons')
-    .update({
-      duration_sec:     duration > 0 ? duration : undefined,
-      cf_thumbnail_url: cfThumb,
-    })
+    .update(lessonUpdate)
     .eq('id', lessonId);
 
-  // ── Auto-set course thumbnail if not already set ───────────
-  // Only use the first lesson (lowest sort_order) as the course thumbnail.
-  if (lesson.course_id && cfThumb) {
-    const { data: course } = await supabase
-      .from('courses')
-      .select('thumbnail_url')
-      .eq('id', lesson.course_id)
-      .single();
+  if (lessonErr) {
+    console.error('[syncLessonStreamMeta] lesson', lessonErr);
+    return;
+  }
 
-    if (course && !course.thumbnail_url) {
-      // Check this is the first (or only) lesson in the course.
-      const { data: firstLesson } = await supabase
-        .from('lessons')
-        .select('id')
-        .eq('course_id', lesson.course_id)
-        .order('sort_order', { ascending: true })
-        .limit(1)
-        .single();
+  if (!lesson.course_id) return;
 
-      if (!firstLesson || firstLesson.id === lessonId) {
-        await supabase
-          .from('courses')
-          .update({ thumbnail_url: cfThumb })
-          .eq('id', lesson.course_id);
-      }
-    }
+  const { data: course } = await supabase
+    .from('courses')
+    .select('thumbnail_url, teacher_id')
+    .eq('id', lesson.course_id)
+    .single();
+
+  if (!course) return;
+
+  const shouldSetCourseThumb =
+    !course.thumbnail_url?.trim() ||
+    isStreamDerivedThumbnailUrl(course.thumbnail_url);
+
+  if (!shouldSetCourseThumb) return;
+
+  // 以「第一個有影片的單元」作為課程封面來源
+  const { data: anchorLesson } = await supabase
+    .from('lessons')
+    .select('id')
+    .eq('course_id', lesson.course_id)
+    .not('cf_video_uid', 'is', null)
+    .order('sort_order', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (anchorLesson && anchorLesson.id !== lessonId) return;
+
+  let courseThumbUrl = cfThumb;
+  if (course.teacher_id) {
+    const stored = await persistCourseThumbnailFromStream(
+      supabase,
+      course.teacher_id,
+      lesson.course_id,
+      cfThumb,
+    );
+    if (stored) courseThumbUrl = stored;
+  }
+
+  const { error: courseErr } = await supabase
+    .from('courses')
+    .update({ thumbnail_url: courseThumbUrl })
+    .eq('id', lesson.course_id);
+
+  if (courseErr) {
+    console.error('[syncLessonStreamMeta] course thumbnail', courseErr);
   }
 }
 
@@ -481,68 +590,6 @@ export async function syncLessonStreamMetaAction(lessonId: string): Promise<Acti
   if (lesson?.course_id) {
     safeRevalidate(`/mentor/courses/${lesson.course_id}/edit`);
   }
-  return { success: '已同步 Stream 影片資訊' };
+  return { success: '已同步影片長度與縮圖（若課程尚無封面會自動設定）' };
 }
 
-export async function gradeAssignmentAction(
-  assignmentId: string,
-  grade: number,
-  feedback: string,
-): Promise<ActionState> {
-  const profile = await requireMentor();
-
-  const supabase = await createClient();
-
-  const { data: asg, error: aErr } = await supabase
-    .from('assignments')
-    .select('lesson_id')
-    .eq('id', assignmentId)
-    .maybeSingle();
-
-  if (aErr || !asg?.lesson_id) {
-    return { error: '找不到作業' };
-  }
-
-  const { data: lesson } = await supabase
-    .from('lessons')
-    .select('course_id')
-    .eq('id', asg.lesson_id)
-    .maybeSingle();
-
-  if (!lesson?.course_id) {
-    return { error: '找不到作業單元' };
-  }
-
-  const { data: course } = await supabase
-    .from('courses')
-    .select('teacher_id')
-    .eq('id', lesson.course_id)
-    .maybeSingle();
-
-  if (course?.teacher_id !== profile.id) {
-    return { error: '無權批改此作業' };
-  }
-
-  if (grade < 0 || grade > 100) {
-    return { error: '分數需介於 0–100' };
-  }
-
-  const { error } = await supabase
-    .from('assignments')
-    .update({
-      grade,
-      feedback: feedback || null,
-      status: 'graded',
-      graded_by: profile.id,
-      graded_at: new Date().toISOString(),
-    })
-    .eq('id', assignmentId);
-
-  if (error) {
-    console.error('[gradeAssignment]', error);
-    return { error: error.message };
-  }
-
-  safeRevalidate('/mentor', '/mentor/assignments');
-  return { success: '已送出批改' };
-}

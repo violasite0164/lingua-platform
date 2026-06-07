@@ -16,6 +16,7 @@ type Plan = {
   description: string;
   price_cents: number;
   currency: string;
+  free_play_games?: boolean;
 };
 
 type Item = {
@@ -180,6 +181,7 @@ function PlanCard({
   title,
   description,
   priceLabel,
+  freePlayGames,
   disabled,
   loading,
   onClick,
@@ -188,6 +190,7 @@ function PlanCard({
   title: string;
   description: string;
   priceLabel: string;
+  freePlayGames?: boolean;
   disabled?: boolean;
   loading?: boolean;
   onClick: () => void;
@@ -207,6 +210,11 @@ function PlanCard({
         <h2 className="text-lg font-semibold">{title}</h2>
       </div>
       <p className="mt-2 flex-1 text-sm text-muted-foreground">{description}</p>
+      {freePlayGames ? (
+        <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+          訂閱期內遊戲 FREE PLAY（不扣體力）
+        </p>
+      ) : null}
       <div className="mt-4 flex items-end justify-between gap-3 border-t border-border/50 pt-4">
         <div>
           <p className="text-2xl font-bold">{priceLabel}</p>

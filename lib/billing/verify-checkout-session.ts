@@ -1,16 +1,25 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { fulfillCourseEnrollment } from '@/lib/billing/fulfill-course-checkout';
+import { claimInboxStaminaPack } from '@/lib/billing/claim-inbox-stamina';
 import { deliverStaminaPackToInbox } from '@/lib/billing/inbox-delivery';
+import { GAME_STAMINA_MAX, type GameStaminaState } from '@/lib/game/stamina';
+import { ensureShopPurchaseRecord } from '@/lib/billing/ensure-shop-purchase';
+import { syncStripeSubscriptionToDb } from '@/lib/billing/sync-stripe-subscription';
 import { getStripeServer } from '@/lib/stripe/server';
 
 export type CheckoutVerifyResult =
   | {
       ok: true;
       status: 'paid';
-      purchaseKind: 'shop_item' | 'subscription';
+      purchaseKind: 'shop_item' | 'subscription' | 'course';
       shopItemKind?: string;
       staminaDelivered?: boolean;
+      staminaClaimed?: boolean;
+      staminaGranted?: number;
+      stamina?: GameStaminaState;
       shopItemTitle?: string;
+      enrolled?: boolean;
     }
   | {
       ok: true;
@@ -28,6 +37,7 @@ export async function verifyCheckoutSessionForUser(
   userId: string,
   userSupabase: SupabaseClient,
   adminSupabase: SupabaseClient,
+  options?: { autoClaimStamina?: boolean },
 ): Promise<CheckoutVerifyResult> {
   const stripe = getStripeServer();
   let session: Awaited<ReturnType<typeof stripe.checkout.sessions.retrieve>>;
@@ -53,7 +63,40 @@ export async function verifyCheckoutSessionForUser(
     };
   }
 
+  if (md.kind === 'course' && md.course_id) {
+    const paymentId =
+      typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : session.id;
+    const result = await fulfillCourseEnrollment(adminSupabase, {
+      userId,
+      courseId: md.course_id,
+      stripePaymentId: paymentId,
+    });
+    if (!result.ok) {
+      return { ok: false, message: result.message };
+    }
+    return {
+      ok: true,
+      status: 'paid',
+      purchaseKind: 'course',
+      enrolled: !result.alreadyEnrolled,
+    };
+  }
+
   if (md.kind === 'subscription') {
+    const planCode = md.plan_code || 'unknown';
+    const stripeSubId =
+      typeof session.subscription === 'string' ? session.subscription : null;
+    if (stripeSubId) {
+      await syncStripeSubscriptionToDb(adminSupabase, {
+        userId,
+        planCode,
+        stripeSubscriptionId: stripeSubId,
+        stripeCustomerId:
+          typeof session.customer === 'string' ? session.customer : null,
+      });
+    }
     return { ok: true, status: 'paid', purchaseKind: 'subscription' };
   }
 
@@ -65,27 +108,24 @@ export async function verifyCheckoutSessionForUser(
   const shopItemId = md.shop_item_id || null;
   const staminaAmount = Number.parseInt(md.stamina_amount || '0', 10);
 
-  const { data: purchase } = await userSupabase
-    .from('user_purchases')
-    .select('id, status, shop_item_id')
-    .eq('stripe_checkout_session_id', sessionId)
-    .eq('user_id', userId)
-    .maybeSingle();
+  const purchaseId = await ensureShopPurchaseRecord(adminSupabase, {
+    userId,
+    shopItemId: shopItemId,
+    stripeCheckoutSessionId: sessionId,
+    stripePaymentIntentId:
+      typeof session.payment_intent === 'string' ? session.payment_intent : null,
+    amountCents: typeof session.amount_total === 'number' ? session.amount_total : null,
+    currency: session.currency ?? null,
+    status: 'paid',
+  });
 
-  const purchaseId = purchase?.id ?? null;
-
-  if (purchaseId && purchase?.status !== 'paid') {
-    await adminSupabase
-      .from('user_purchases')
-      .update({
-        status: 'paid',
-        stripe_payment_intent_id:
-          typeof session.payment_intent === 'string' ? session.payment_intent : null,
-        amount_cents: typeof session.amount_total === 'number' ? session.amount_total : null,
-        currency: session.currency ?? null,
-      } as never)
-      .eq('id', purchaseId);
-  }
+  const { data: purchase } = purchaseId
+    ? await userSupabase
+        .from('user_purchases')
+        .select('shop_item_id')
+        .eq('id', purchaseId)
+        .maybeSingle()
+    : { data: null };
 
   let shopItemTitle = '體力道具';
   const resolvedShopItemId = shopItemId || purchase?.shop_item_id || null;
@@ -99,28 +139,149 @@ export async function verifyCheckoutSessionForUser(
   }
 
   let staminaDelivered = false;
+  let staminaClaimed = false;
+  let staminaGranted: number | undefined;
+  let stamina: GameStaminaState | undefined;
+
   if (
     shopItemKind === 'stamina_pack' &&
     Number.isFinite(staminaAmount) &&
     staminaAmount > 0 &&
     purchaseId
   ) {
-    await deliverStaminaPackToInbox(adminSupabase, {
-      userId,
-      purchaseId,
-      shopItemId: resolvedShopItemId,
-      shopItemTitle,
-      staminaAmount,
-    });
+    if (options?.autoClaimStamina) {
+      const { data: existingInbox } = await userSupabase
+        .from('profile_inbox_messages')
+        .select('id, claimed_at')
+        .eq('user_id', userId)
+        .contains('payload', { purchase_id: purchaseId })
+        .maybeSingle();
 
-    const { data: inboxRow } = await userSupabase
-      .from('profile_inbox_messages')
-      .select('id')
-      .eq('user_id', userId)
-      .contains('payload', { purchase_id: purchaseId })
-      .maybeSingle();
+      if (existingInbox?.id && !existingInbox.claimed_at) {
+        const claim = await claimInboxStaminaPack(
+          userSupabase,
+          userId,
+          existingInbox.id,
+        );
+        if (claim.ok) {
+          staminaClaimed = true;
+          staminaGranted = claim.granted;
+          stamina = claim.stamina;
+          staminaDelivered = true;
+        }
+      } else if (existingInbox?.claimed_at) {
+        staminaDelivered = true;
+        staminaClaimed = true;
+        const { data: staminaRow } = await userSupabase.rpc('get_game_stamina');
+        const row = staminaRow as Record<string, unknown> | null;
+        if (row && row.ok === true) {
+          stamina = {
+            stamina: typeof row.stamina === 'number' ? row.stamina : GAME_STAMINA_MAX,
+            max: typeof row.max === 'number' ? row.max : GAME_STAMINA_MAX,
+            isAdmin: row.isAdmin === true,
+            nextRegenAt:
+              typeof row.nextRegenAt === 'string' ? row.nextRegenAt : null,
+          };
+        }
+      }
 
-    staminaDelivered = Boolean(inboxRow?.id);
+      if (!staminaClaimed) {
+      const grantAmount = Math.min(
+        GAME_STAMINA_MAX,
+        Math.max(1, Math.round(staminaAmount)),
+      );
+      const { data: grantData, error: grantError } = await userSupabase.rpc(
+        'grant_game_stamina',
+        { p_amount: grantAmount },
+      );
+
+      if (!grantError) {
+        const grant = grantData as Record<string, unknown> | null;
+        if (grant?.ok === true) {
+          staminaClaimed = true;
+          staminaGranted = grantAmount;
+          stamina = {
+            stamina:
+              typeof grant.stamina === 'number' ? grant.stamina : GAME_STAMINA_MAX,
+            max: typeof grant.max === 'number' ? grant.max : GAME_STAMINA_MAX,
+            isAdmin: false,
+            nextRegenAt: null,
+          };
+          staminaDelivered = true;
+
+          await deliverStaminaPackToInbox(adminSupabase, {
+            userId,
+            purchaseId,
+            shopItemId: resolvedShopItemId,
+            shopItemTitle,
+            staminaAmount,
+            alreadyClaimed: true,
+          });
+        }
+      }
+      }
+
+      if (!staminaClaimed) {
+        await deliverStaminaPackToInbox(adminSupabase, {
+          userId,
+          purchaseId,
+          shopItemId: resolvedShopItemId,
+          shopItemTitle,
+          staminaAmount,
+        });
+
+        const { data: inboxRow } = await userSupabase
+          .from('profile_inbox_messages')
+          .select('id')
+          .eq('user_id', userId)
+          .contains('payload', { purchase_id: purchaseId })
+          .maybeSingle();
+
+        staminaDelivered = Boolean(inboxRow?.id);
+
+        if (inboxRow?.id) {
+          const claim = await claimInboxStaminaPack(userSupabase, userId, inboxRow.id);
+          if (claim.ok) {
+            staminaClaimed = true;
+            staminaGranted = claim.granted;
+            stamina = claim.stamina;
+          }
+        }
+      }
+    } else {
+      await deliverStaminaPackToInbox(adminSupabase, {
+        userId,
+        purchaseId,
+        shopItemId: resolvedShopItemId,
+        shopItemTitle,
+        staminaAmount,
+      });
+
+      const { data: inboxRow } = await userSupabase
+        .from('profile_inbox_messages')
+        .select('id')
+        .eq('user_id', userId)
+        .contains('payload', { purchase_id: purchaseId })
+        .maybeSingle();
+
+      staminaDelivered = Boolean(inboxRow?.id);
+    }
+  }
+
+  if (options?.autoClaimStamina && staminaClaimed && !stamina) {
+    const { data: staminaRow } = await userSupabase.rpc('get_game_stamina');
+    const row = staminaRow as Record<string, unknown> | null;
+    if (row && row.ok === true) {
+      stamina = {
+        stamina:
+          typeof row.stamina === 'number' ? row.stamina : GAME_STAMINA_MAX,
+        max: typeof row.max === 'number' ? row.max : GAME_STAMINA_MAX,
+        isAdmin: row.isAdmin === true,
+        freePlay: row.freePlay === true,
+        nextRegenAt:
+          typeof row.nextRegenAt === 'string' ? row.nextRegenAt : null,
+      };
+    }
   }
 
   return {
@@ -129,6 +290,9 @@ export async function verifyCheckoutSessionForUser(
     purchaseKind: 'shop_item',
     shopItemKind,
     staminaDelivered,
+    staminaClaimed,
+    staminaGranted,
+    stamina,
     shopItemTitle,
   };
 }

@@ -3,7 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { FooterVisibilityProvider } from '@/components/providers/footer-visibility-provider';
-import { Navbar } from '@/components/layout/navbar';
+import { NavbarShell } from '@/components/layout/navbar-shell';
 import { Footer } from '@/components/layout/footer';
 import { SiteMarketingTheme } from '@/components/site-marketing-theme';
 
@@ -14,15 +14,15 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | LinguaLearn',
-    default: 'LinguaLearn — 語言學習平台',
+    template: '%s | Vint Platform',
+    default: 'Vint Platform — 語言學習平台',
   },
   description: '香港中小學生英文學習平台：貼近本地教資、趣味線上課程、AI 輔助與資深師資，時間彈性在家學',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'LinguaLearn',
+    title: 'Vint Platform',
   },
 };
 
@@ -53,8 +53,8 @@ export default function RootLayout({
         >
           <SiteMarketingTheme />
           <FooterVisibilityProvider>
-            <Navbar />
-            <main className="flex min-h-0 flex-1 flex-col">{children}</main>
+            <NavbarShell />
+            <main className="flex min-h-0 w-full min-w-0 flex-1 flex-col">{children}</main>
             <Footer />
           </FooterVisibilityProvider>
         </ThemeProvider>
