@@ -27,6 +27,11 @@
   padding: 0.25rem;
 }
 
+.quiz-play-root--fixed.quiz-play-root--embedded {
+  height: 100%;
+  min-height: 0;
+}
+
 .quiz-play-fixed-viewport {
   position: relative;
   width: 100%;

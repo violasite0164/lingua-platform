@@ -188,7 +188,7 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
   const sceneEl = sceneRef.current;
   const displayMood = prewarm ? 'idle' : characterMood;
   const prewarmTotal = total || QUIZ_QUESTIONS_PER_ROUND;
-  const useFixedCanvas = !embedded && !prewarm;
+  const useFixedCanvas = !prewarm;
 
   useLayoutEffect(() => {
     if (!useFixedCanvas) return;
@@ -270,7 +270,8 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
         fredoka.className,
         'quiz-play-root select-none',
         prewarm && 'quiz-play-root--prewarm',
-        embedded ? 'flex min-h-0 flex-1 flex-col' : 'quiz-play-root--fixed',
+        useFixedCanvas ? 'quiz-play-root--fixed' : embedded ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-4xl px-2 py-2',
+        embedded && useFixedCanvas && 'quiz-play-root--embedded',
       )}
       style={themeStyle}
       data-quiz-play-area
