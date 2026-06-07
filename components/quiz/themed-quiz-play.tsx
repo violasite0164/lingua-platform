@@ -199,7 +199,9 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
       const w = viewport.clientWidth;
       const h = viewport.clientHeight;
       if (w <= 0 || h <= 0) return;
-      const next = Math.min(w / QUIZ_CANVAS_BASE_WIDTH, h / QUIZ_CANVAS_BASE_HEIGHT);
+      // Retro "cover" mode: always fill viewport height (top+bottom stick),
+      // allow horizontal crop on narrower screens.
+      const next = Math.max(w / QUIZ_CANVAS_BASE_WIDTH, h / QUIZ_CANVAS_BASE_HEIGHT);
       const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
