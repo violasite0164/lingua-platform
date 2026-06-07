@@ -46,11 +46,12 @@
 .quiz-play-fixed-canvas {
   position: absolute;
   left: 50%;
+  top: 0;
   bottom: 0;
   width: 1280px;
   height: 720px;
   transform: translateX(-50%) scale(var(--quiz-canvas-scale, 1));
-  transform-origin: center bottom;
+  transform-origin: center top;
   will-change: transform;
 }
 

@@ -199,9 +199,10 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
       const w = viewport.clientWidth;
       const h = viewport.clientHeight;
       if (w <= 0 || h <= 0) return;
-      // Retro contain mode: keep full game canvas visible (no bottom cut),
-      // scale by available viewport within menu/content container.
-      const next = Math.min(w / QUIZ_CANVAS_BASE_WIDTH, h / QUIZ_CANVAS_BASE_HEIGHT);
+      // Retro full-height mode: always fit game to viewport height so the
+      // scene stays top-bottom aligned even when viewport is narrow.
+      // Narrow screens may crop horizontally (left/right) by design.
+      const next = h / QUIZ_CANVAS_BASE_HEIGHT;
       const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
