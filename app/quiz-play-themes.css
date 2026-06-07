@@ -35,6 +35,15 @@
   --quiz-mascot-reserve-right: 0px;
 }
 
+/* 一般模式：固定 16:9 遊戲畫布，整體 UI/角色同比例縮放 */
+.quiz-play-scene:not(.quiz-play-scene--embedded) {
+  width: min(100%, 1280px);
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+  max-height: min(calc(100dvh - 0.5rem), 820px);
+  margin-inline: auto;
+}
+
 /* ─── 魔法森林動態（無整片 ::after 白漸層遮罩） ─── */
 .quiz-forest-fx {
   position: absolute;
@@ -462,21 +471,21 @@
 }
 
 .quiz-play-mascot-side--right {
-  gap: clamp(0.15rem, 1.2vw, 0.65rem);
+  gap: clamp(0.15rem, 1.2%, 0.65rem);
 }
 
 .quiz-play-mascot {
   position: relative;
   flex-shrink: 0;
-  width: clamp(112px, 22vw, 215px);
+  width: clamp(112px, 22%, 215px);
 }
 
 .quiz-play-mascot-side--right .quiz-play-mascot {
-  width: clamp(96px, 17vw, 188px);
+  width: clamp(96px, 17%, 188px);
 }
 
 .quiz-play-mascot--bear {
-  width: clamp(200px, 40vw, 360px);
+  width: clamp(200px, 40%, 360px);
   transform: translateX(-28%);
 }
 
@@ -487,7 +496,7 @@
 
 .quiz-play-mascot--girl {
   transform: translateX(-6%);
-  margin-left: clamp(-1.75rem, -5vw, -0.85rem);
+  margin-left: clamp(-1.75rem, -5%, -0.85rem);
 }
 
 .quiz-play-mascot-img {
@@ -502,7 +511,7 @@
   display: block;
   width: 100%;
   aspect-ratio: 220 / 320;
-  min-height: clamp(140px, 28vw, 260px);
+  min-height: clamp(140px, 28%, 260px);
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
   opacity: 0;
   transition: opacity 0.2s ease-out;
@@ -514,7 +523,7 @@
 
 .quiz-play-mascot-rive--bear {
   aspect-ratio: 280 / 240;
-  min-height: clamp(120px, 24vw, 220px);
+  min-height: clamp(120px, 24%, 220px);
 }
 
 .quiz-play-mascot-rive-canvas {
