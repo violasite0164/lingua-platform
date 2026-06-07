@@ -200,7 +200,7 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
       const h = viewport.clientHeight;
       if (w <= 0 || h <= 0) return;
       const next = Math.min(w / QUIZ_CANVAS_BASE_WIDTH, h / QUIZ_CANVAS_BASE_HEIGHT);
-      const clamped = Math.max(0.2, Math.min(next, 1.6));
+      const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
 
