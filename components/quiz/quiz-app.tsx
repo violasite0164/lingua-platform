@@ -1414,6 +1414,7 @@ function QuizAppCore({
       {mountPlayScene &&
         !((isStage2CloneMode || isStage3DiscoMode) && phase === 'play') &&
         (
+        <div className={cn(embedded && 'relative flex min-h-0 flex-1')}>
         <ThemedQuizPlay
           prewarm={playScenePrewarm}
           embedded={embedded}
@@ -1456,6 +1457,7 @@ function QuizAppCore({
             stopHold({ advanceIfPossible: true });
           }}
         />
+        </div>
       )}
 
       {bootReady && phase === 'result' && (

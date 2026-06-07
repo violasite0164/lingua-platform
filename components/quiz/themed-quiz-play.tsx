@@ -276,7 +276,7 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
         useFixedCanvas ? 'quiz-play-root--fixed' : embedded ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-4xl px-2 py-2',
         embedded &&
           useFixedCanvas &&
-          'quiz-play-root--embedded h-full flex min-h-0 w-full flex-1 flex-col',
+          'quiz-play-root--embedded absolute inset-0 flex min-h-0 w-full flex-1 flex-col',
       )}
       style={themeStyle}
       data-quiz-play-area
