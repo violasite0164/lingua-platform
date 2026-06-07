@@ -199,9 +199,6 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
       const w = viewport.clientWidth;
       const h = viewport.clientHeight;
       if (w <= 0 || h <= 0) return;
-      // Retro full-height mode: always fit game to viewport height so the
-      // scene stays top-bottom aligned even when viewport is narrow.
-      // Narrow screens may crop horizontally (left/right) by design.
       const next = h / QUIZ_CANVAS_BASE_HEIGHT;
       const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
@@ -274,9 +271,7 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
         'quiz-play-root select-none',
         prewarm && 'quiz-play-root--prewarm',
         useFixedCanvas ? 'quiz-play-root--fixed' : embedded ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-4xl px-2 py-2',
-        embedded &&
-          useFixedCanvas &&
-          'quiz-play-root--embedded absolute inset-0 flex min-h-0 w-full flex-1 flex-col',
+        embedded && useFixedCanvas && 'quiz-play-root--embedded',
       )}
       style={themeStyle}
       data-quiz-play-area
