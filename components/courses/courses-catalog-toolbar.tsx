@@ -23,6 +23,7 @@ type Props = {
   categories: CategoryOption[];
   filters: CourseCatalogFilters;
   resultCount: number;
+  planLabels: SubscriptionPlanLabels;
 };
 
 const SUBSCRIPTION_ACCESS_OPTIONS = (
