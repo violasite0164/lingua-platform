@@ -10,10 +10,20 @@ export function isMobilePortraitViewport(): boolean {
   return window.matchMedia(getMobileLandscapeMediaQuery()).matches;
 }
 
+type LandscapeLockTarget =
+  | 'any'
+  | 'natural'
+  | 'landscape'
+  | 'landscape-primary'
+  | 'landscape-secondary'
+  | 'portrait'
+  | 'portrait-primary'
+  | 'portrait-secondary';
+
 export async function tryLockLandscapeOrientation(): Promise<void> {
   if (typeof screen === 'undefined') return;
   const orientation = screen.orientation as ScreenOrientation & {
-    lock?: (orientation: OrientationLockType) => Promise<void>;
+    lock?: (orientation: LandscapeLockTarget) => Promise<void>;
   };
   if (typeof orientation?.lock !== 'function') return;
   try {
