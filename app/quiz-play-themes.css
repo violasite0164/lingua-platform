@@ -511,15 +511,15 @@
 .quiz-play-mascot {
   position: relative;
   flex-shrink: 0;
-  width: clamp(112px, 22%, 215px);
+  width: clamp(132px, 26%, 260px);
 }
 
 .quiz-play-mascot-side--right .quiz-play-mascot {
-  width: clamp(96px, 17%, 188px);
+  width: clamp(118px, 21%, 235px);
 }
 
 .quiz-play-mascot--bear {
-  width: clamp(200px, 40%, 360px);
+  width: clamp(240px, 48%, 430px);
   transform: translateX(-28%);
 }
 
@@ -545,7 +545,7 @@
   display: block;
   width: 100%;
   aspect-ratio: 220 / 320;
-  min-height: clamp(140px, 28%, 260px);
+  min-height: clamp(175px, 33%, 320px);
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
   opacity: 0;
   transition: opacity 0.2s ease-out;
@@ -557,7 +557,7 @@
 
 .quiz-play-mascot-rive--bear {
   aspect-ratio: 280 / 240;
-  min-height: clamp(120px, 24%, 220px);
+  min-height: clamp(150px, 29%, 270px);
 }
 
 .quiz-play-mascot-rive-canvas {
@@ -636,11 +636,11 @@
 
 @media (max-width: 420px) {
   .quiz-play-mascot--bear {
-    width: 176px;
+    width: 220px;
   }
 
   .quiz-play-mascot-side--right .quiz-play-mascot {
-    width: 88px;
+    width: 110px;
   }
 }
 
