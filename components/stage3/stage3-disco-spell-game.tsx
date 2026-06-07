@@ -1181,6 +1181,29 @@ export function Stage3DiscoSpellGame({ embedded, resume, onStageClear, onGameOve
     };
   }, [phase, roundIndex, currentRound, clearInputFeedback, clearWordPerfect]);
 
+  useLayoutEffect(() => {
+    if (!embedded) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const updateScale = () => {
+      const h = viewport.clientHeight;
+      if (h <= 0) return;
+      const next = h / STAGE3_CANVAS_BASE_HEIGHT;
+      const clamped = Math.max(0.2, Math.min(next, 3));
+      setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
+    };
+
+    updateScale();
+    const ro = new ResizeObserver(updateScale);
+    ro.observe(viewport);
+    window.addEventListener('resize', updateScale);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [embedded]);
+
   const inputSlotKey = `${roundIndex}`;
 
   if (loadError) {
@@ -1226,29 +1249,6 @@ export function Stage3DiscoSpellGame({ embedded, resume, onStageClear, onGameOve
       phase !== 'award-ceremony' &&
       isStage3FeverRound(roundIndex)) ||
     isFeverMarquee;
-
-  useLayoutEffect(() => {
-    if (!embedded) return;
-    const viewport = viewportRef.current;
-    if (!viewport) return;
-
-    const updateScale = () => {
-      const h = viewport.clientHeight;
-      if (h <= 0) return;
-      const next = h / STAGE3_CANVAS_BASE_HEIGHT;
-      const clamped = Math.max(0.2, Math.min(next, 3));
-      setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
-    };
-
-    updateScale();
-    const ro = new ResizeObserver(updateScale);
-    ro.observe(viewport);
-    window.addEventListener('resize', updateScale);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener('resize', updateScale);
-    };
-  }, [embedded]);
 
   const stage3Scene = (
     <div
