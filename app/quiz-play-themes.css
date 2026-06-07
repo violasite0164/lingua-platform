@@ -21,6 +21,18 @@
   --qp-footer: #1a3a6b;
 }
 
+.quiz-play-scene {
+  position: relative;
+  display: flex;
+  min-height: min(100%, 720px);
+  flex: 1;
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.75rem 0.5rem 1rem;
+  background-color: #7ec8e3;
+}
+
 .quiz-play-root--fixed {
   width: 100%;
   min-height: 0;
@@ -53,34 +65,10 @@
   will-change: transform;
 }
 
-.quiz-play-scene {
-  position: relative;
-  display: flex;
-  min-height: min(100%, 720px);
-  flex: 1;
-  flex-direction: column;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: 0.75rem 0.5rem 1rem;
-  background-color: #7ec8e3;
-  --quiz-mascot-reserve-left: 0px;
-  --quiz-mascot-reserve-right: 0px;
-  container-type: inline-size;
-}
-
 .quiz-play-scene--fixed {
   width: 100%;
   height: 100%;
   min-height: 0;
-}
-
-/* 一般模式：固定 16:9 遊戲畫布，整體 UI/角色同比例縮放 */
-.quiz-play-scene:not(.quiz-play-scene--embedded) {
-  width: min(100%, 1280px);
-  aspect-ratio: 16 / 9;
-  min-height: 0;
-  max-height: min(calc(100dvh - 0.5rem), 820px);
-  margin-inline: auto;
 }
 
 /* ─── 魔法森林動態（無整片 ::after 白漸層遮罩） ─── */
@@ -338,7 +326,7 @@
 
 .quiz-status-stroke-text {
   color: #ffec3d;
-  font-size: clamp(1.05rem, 3.8cqw, 1.45rem);
+  font-size: clamp(1.05rem, 3.8vw, 1.45rem);
   font-weight: 800;
   line-height: 1.2;
   paint-order: stroke fill;
@@ -366,10 +354,7 @@
   z-index: 10;
   display: flex;
   width: 100%;
-  max-width: min(
-    680px,
-    calc(100% - var(--quiz-mascot-reserve-left) - var(--quiz-mascot-reserve-right))
-  );
+  max-width: min(100%, 680px);
   flex: 1;
   flex-direction: column;
   margin-left: auto;
@@ -378,7 +363,7 @@
 
 /* ─── Title ─── */
 .quiz-bubble-title {
-  font-size: clamp(1.35rem, 4.5cqw, 2.15rem);
+  font-size: clamp(1.35rem, 4.5vw, 2.15rem);
   line-height: 1;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -488,7 +473,7 @@
   z-index: 1;
   margin: 0;
   text-align: center;
-  font-size: clamp(1.35rem, 4.8cqw, 1.95rem);
+  font-size: clamp(1.35rem, 4.8vw, 1.95rem);
   font-weight: 800;
   line-height: 1.28;
   min-height: calc(1.28em * var(--qp-question-lines));
@@ -510,21 +495,21 @@
 }
 
 .quiz-play-mascot-side--right {
-  gap: clamp(0.15rem, 1.2%, 0.65rem);
+  gap: clamp(0.15rem, 1.2vw, 0.65rem);
 }
 
 .quiz-play-mascot {
   position: relative;
   flex-shrink: 0;
-  width: clamp(112px, 22%, 215px);
+  width: clamp(112px, 22vw, 215px);
 }
 
 .quiz-play-mascot-side--right .quiz-play-mascot {
-  width: clamp(96px, 17%, 188px);
+  width: clamp(96px, 17vw, 188px);
 }
 
 .quiz-play-mascot--bear {
-  width: clamp(200px, 40%, 360px);
+  width: clamp(200px, 40vw, 360px);
   transform: translateX(-28%);
 }
 
@@ -535,7 +520,7 @@
 
 .quiz-play-mascot--girl {
   transform: translateX(-6%);
-  margin-left: clamp(-1.75rem, -5%, -0.85rem);
+  margin-left: clamp(-1.75rem, -5vw, -0.85rem);
 }
 
 .quiz-play-mascot-img {
@@ -550,7 +535,7 @@
   display: block;
   width: 100%;
   aspect-ratio: 220 / 320;
-  min-height: clamp(140px, 28%, 260px);
+  min-height: clamp(140px, 28vw, 260px);
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
   opacity: 0;
   transition: opacity 0.2s ease-out;
@@ -562,7 +547,7 @@
 
 .quiz-play-mascot-rive--bear {
   aspect-ratio: 280 / 240;
-  min-height: clamp(120px, 24%, 220px);
+  min-height: clamp(120px, 24vw, 220px);
 }
 
 .quiz-play-mascot-rive-canvas {
@@ -609,12 +594,12 @@
 
 .quiz-play-mascot-bubble {
   position: absolute;
-  max-width: min(168px, 42cqw);
+  max-width: min(168px, 42vw);
   border-radius: 1rem;
   border: 3px solid #0f172a;
   background: rgba(255, 255, 255, 0.97);
   padding: 0.4rem 0.55rem;
-  font-size: clamp(0.8rem, 2.6cqw, 0.95rem);
+  font-size: clamp(0.8rem, 2.6vw, 0.95rem);
   font-weight: 900;
   line-height: 1.25;
   color: #0f172a;
@@ -623,7 +608,7 @@
 }
 
 .quiz-play-mascot-bubble--bear {
-  max-width: min(200px, 50cqw);
+  max-width: min(200px, 50vw);
   white-space: normal;
   text-align: center;
   transform: translate(-52%, calc(-100% - 6px));
@@ -778,7 +763,7 @@
   position: relative;
   z-index: 1;
   flex: 1;
-  font-size: clamp(1.15rem, 3.8cqw, 1.55rem);
+  font-size: clamp(1.15rem, 3.8vw, 1.55rem);
   font-weight: 800;
   line-height: 1.2;
 }

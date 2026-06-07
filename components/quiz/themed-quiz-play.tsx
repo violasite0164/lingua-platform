@@ -31,7 +31,6 @@ const fredoka = Fredoka({
   display: 'swap',
 });
 
-const QUIZ_CANVAS_BASE_WIDTH = 1280;
 const QUIZ_CANVAS_BASE_HEIGHT = 720;
 
 function cleanOption(opt: string): string {
@@ -196,9 +195,8 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
     if (!viewport) return;
 
     const updateScale = () => {
-      const w = viewport.clientWidth;
       const h = viewport.clientHeight;
-      if (w <= 0 || h <= 0) return;
+      if (h <= 0) return;
       const next = h / QUIZ_CANVAS_BASE_HEIGHT;
       const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
@@ -270,7 +268,11 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
         fredoka.className,
         'quiz-play-root select-none',
         prewarm && 'quiz-play-root--prewarm',
-        useFixedCanvas ? 'quiz-play-root--fixed' : embedded ? 'flex min-h-0 flex-1 flex-col' : 'mx-auto w-full max-w-4xl px-2 py-2',
+        useFixedCanvas
+          ? 'quiz-play-root--fixed'
+          : embedded
+            ? 'flex min-h-0 flex-1 flex-col'
+            : 'mx-auto w-full max-w-4xl px-2 py-2',
         embedded && useFixedCanvas && 'quiz-play-root--embedded',
       )}
       style={themeStyle}
@@ -286,7 +288,7 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
           >
             <div
               ref={sceneRef}
-              className={cn('quiz-play-scene quiz-play-scene--fixed')}
+              className={cn('quiz-play-scene', 'quiz-play-scene--fixed')}
             >
               <QuizForestAtmosphere />
               <div className="quiz-play-inner">
@@ -361,55 +363,55 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
                           }}
                         >
                           {current.options.map((opt, i) => {
-                        const label = cleanOption(opt);
-                        const decor = emojiForOptionText(label);
-                        const isSel = picked === i;
-                        const showTruth = answeredThis;
-                        const isAns = i === Number(current.correct_index);
-                        const optColors = getQuizOptionColors(themeId, i);
-                        const optStyle = getQuizOptionButtonStyle(optColors, {
-                          picked: isSel && !showTruth,
-                          revealed: showTruth,
-                          correct: showTruth && isAns,
-                          wrong: showTruth && isSel && !isAns,
-                        });
+                            const label = cleanOption(opt);
+                            const decor = emojiForOptionText(label);
+                            const isSel = picked === i;
+                            const showTruth = answeredThis;
+                            const isAns = i === Number(current.correct_index);
+                            const optColors = getQuizOptionColors(themeId, i);
+                            const optStyle = getQuizOptionButtonStyle(optColors, {
+                              picked: isSel && !showTruth,
+                              revealed: showTruth,
+                              correct: showTruth && isAns,
+                              wrong: showTruth && isSel && !isAns,
+                            });
 
-                        return (
-                          <button
-                            key={`${current.id}-${i}`}
-                            type="button"
-                            data-option-index={String(i)}
-                            data-opt={String(i)}
-                            className={cn(
-                              'quiz-play-opt',
-                              isSel && !showTruth && 'is-picked',
-                              showTruth && 'is-revealed',
-                              showTruth && isAns && 'is-correct',
-                              showTruth && isSel && !isAns && 'is-wrong',
-                            )}
-                            style={optStyle}
-                          >
-                            <span className="quiz-play-opt-badge">
-                              {String.fromCharCode(65 + i)}
-                            </span>
-                            <span className="flex flex-1 items-center gap-1.5">
-                              {decor && <span className="quiz-play-opt-emoji">{decor}</span>}
-                              <span className="quiz-play-opt-label quiz-cute-stroke-text">{label}</span>
-                            </span>
-                            {showTruth && isAns && (
-                              <CheckCircle2
-                                className="absolute -right-1 -top-1 size-7 fill-[#22c55e] text-white"
-                                aria-hidden
-                              />
-                            )}
-                            {showTruth && isSel && !isAns && (
-                              <XCircle
-                                className="absolute -right-1 -top-1 size-7 text-[#ef4444]"
-                                aria-hidden
-                              />
-                            )}
-                          </button>
-                        );
+                            return (
+                              <button
+                                key={`${current.id}-${i}`}
+                                type="button"
+                                data-option-index={String(i)}
+                                data-opt={String(i)}
+                                className={cn(
+                                  'quiz-play-opt',
+                                  isSel && !showTruth && 'is-picked',
+                                  showTruth && 'is-revealed',
+                                  showTruth && isAns && 'is-correct',
+                                  showTruth && isSel && !isAns && 'is-wrong',
+                                )}
+                                style={optStyle}
+                              >
+                                <span className="quiz-play-opt-badge">
+                                  {String.fromCharCode(65 + i)}
+                                </span>
+                                <span className="flex flex-1 items-center gap-1.5">
+                                  {decor && <span className="quiz-play-opt-emoji">{decor}</span>}
+                                  <span className="quiz-play-opt-label quiz-cute-stroke-text">{label}</span>
+                                </span>
+                                {showTruth && isAns && (
+                                  <CheckCircle2
+                                    className="absolute -right-1 -top-1 size-7 fill-[#22c55e] text-white"
+                                    aria-hidden
+                                  />
+                                )}
+                                {showTruth && isSel && !isAns && (
+                                  <XCircle
+                                    className="absolute -right-1 -top-1 size-7 text-[#ef4444]"
+                                    aria-hidden
+                                  />
+                                )}
+                              </button>
+                            );
                           })}
                         </div>
                         {!optionsAnswerable && (
@@ -636,16 +638,16 @@ export function ThemedQuizPlay(props: ThemedQuizPlayProps) {
 
         {answerPopupPortal}
 
-        <QuizQuestionMascots
-          sceneRef={sceneRef}
-          boardRef={boardRef}
-          characterMood={displayMood}
-          bearBubble={
-            prewarm ? null : bearBubble(characterMood, isCorrect, cursor * 11 + (picked ?? 0))
-          }
-          boyBubble={prewarm ? null : boyBubble(characterMood, isCorrect)}
-          girlBubble={prewarm ? null : girlBubble(characterMood)}
-        />
+          <QuizQuestionMascots
+            sceneRef={sceneRef}
+            boardRef={boardRef}
+            characterMood={displayMood}
+            bearBubble={
+              prewarm ? null : bearBubble(characterMood, isCorrect, cursor * 11 + (picked ?? 0))
+            }
+            boyBubble={prewarm ? null : boyBubble(characterMood, isCorrect)}
+            girlBubble={prewarm ? null : girlBubble(characterMood)}
+          />
 
         </div>
       )}
