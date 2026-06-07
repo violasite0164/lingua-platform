@@ -55,6 +55,7 @@ const DEFAULT_MOTION: Required<CloneShuffleMotionOptions> = {
   staggerMs: 32,
   settleMs: 90,
   windupStaggerMs: 16,
+  style: 'glide',
 };
 
 const FLIGHT_EASING = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
