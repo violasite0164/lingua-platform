@@ -30,8 +30,8 @@
 }
 
 .quiz-play-root--fixed.quiz-play-root--embedded {
-  height: 100%;
-  min-height: 0;
+  min-height: 100dvh;
+  height: 100dvh;
 }
 
 .quiz-play-fixed-viewport {
