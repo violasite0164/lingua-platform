@@ -33,6 +33,7 @@
   background-color: #7ec8e3;
   --quiz-mascot-reserve-left: 0px;
   --quiz-mascot-reserve-right: 0px;
+  container-type: inline-size;
 }
 
 /* 一般模式：固定 16:9 遊戲畫布，整體 UI/角色同比例縮放 */
@@ -299,7 +300,7 @@
 
 .quiz-status-stroke-text {
   color: #ffec3d;
-  font-size: clamp(1.05rem, 3.8vw, 1.45rem);
+  font-size: clamp(1.05rem, 3.8cqw, 1.45rem);
   font-weight: 800;
   line-height: 1.2;
   paint-order: stroke fill;
@@ -339,7 +340,7 @@
 
 /* ─── Title ─── */
 .quiz-bubble-title {
-  font-size: clamp(1.35rem, 4.5vw, 2.15rem);
+  font-size: clamp(1.35rem, 4.5cqw, 2.15rem);
   line-height: 1;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -449,7 +450,7 @@
   z-index: 1;
   margin: 0;
   text-align: center;
-  font-size: clamp(1.35rem, 4.8vw, 1.95rem);
+  font-size: clamp(1.35rem, 4.8cqw, 1.95rem);
   font-weight: 800;
   line-height: 1.28;
   min-height: calc(1.28em * var(--qp-question-lines));
@@ -570,12 +571,12 @@
 
 .quiz-play-mascot-bubble {
   position: absolute;
-  max-width: min(168px, 42vw);
+  max-width: min(168px, 42cqw);
   border-radius: 1rem;
   border: 3px solid #0f172a;
   background: rgba(255, 255, 255, 0.97);
   padding: 0.4rem 0.55rem;
-  font-size: clamp(0.8rem, 2.6vw, 0.95rem);
+  font-size: clamp(0.8rem, 2.6cqw, 0.95rem);
   font-weight: 900;
   line-height: 1.25;
   color: #0f172a;
@@ -584,7 +585,7 @@
 }
 
 .quiz-play-mascot-bubble--bear {
-  max-width: min(200px, 50vw);
+  max-width: min(200px, 50cqw);
   white-space: normal;
   text-align: center;
   transform: translate(-52%, calc(-100% - 6px));
@@ -739,7 +740,7 @@
   position: relative;
   z-index: 1;
   flex: 1;
-  font-size: clamp(1.15rem, 3.8vw, 1.55rem);
+  font-size: clamp(1.15rem, 3.8cqw, 1.55rem);
   font-weight: 800;
   line-height: 1.2;
 }
