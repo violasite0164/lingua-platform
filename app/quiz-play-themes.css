@@ -365,10 +365,7 @@
   z-index: 10;
   display: flex;
   width: 100%;
-  max-width: min(
-    680px,
-    calc(100% - var(--quiz-mascot-reserve-left) - var(--quiz-mascot-reserve-right))
-  );
+  max-width: min(100%, 680px);
   flex: 1;
   flex-direction: column;
   margin-left: auto;
