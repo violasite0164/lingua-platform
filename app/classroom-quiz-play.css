@@ -329,6 +329,7 @@
   border-radius: 0.75rem;
   background: #0f172a;
   border: 2px solid rgba(255, 255, 255, 0.12);
+  z-index: 6;
 }
 
 /* 題目語音：影片正下方（選擇題模式） */
@@ -624,9 +625,9 @@
 
 /* 吉祥物：男左女右，腳底 fixed 貼齊視窗底部（不影響測驗區版面） */
 .classroom-quiz-mascot-side {
-  position: fixed;
+  position: absolute;
   bottom: 0;
-  z-index: 2;
+  z-index: 22;
   pointer-events: none;
   display: flex;
   align-items: flex-end;
@@ -660,7 +661,7 @@
 .classroom-quiz-mascot-bubbles-layer {
   position: absolute;
   inset: 0;
-  z-index: 30;
+  z-index: 40;
   pointer-events: none;
 }
 
@@ -743,7 +744,7 @@
 }
 
 .classroom-quiz-mascot-bubbles-layer--outcome {
-  z-index: 46;
+  z-index: 44;
 }
 
 @keyframes classroom-quiz-mascot-bubble-pop {

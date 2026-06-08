@@ -10,24 +10,24 @@ import type { QuizCharacterMood } from '@/lib/games/quiz-play-engine';
 import { cn } from '@/lib/utils';
 
 type MascotPositions = {
-  /** 視窗座標（配合 position: fixed） */
+  /** 場景內座標（配合 scene 內 absolute） */
   boyLeft: number;
   girlLeft: number;
   width: number;
 };
 
 type BubblePos = {
-  /** 視窗座標（配合 position: fixed，與吉祥物一致） */
+  /** 場景內座標（配合 scene 內 absolute，與吉祥物一致） */
   left: number;
   top: number;
 };
 
-/** 氣泡錨點：角色頭頂中央（與 fixed 吉祥物同一座標系） */
-function measureBubble(anchor: HTMLElement): BubblePos {
+/** 氣泡錨點：角色頭頂中央（與 scene 內 absolute 吉祥物同座標系） */
+function measureBubble(anchor: HTMLElement, sceneRect: DOMRect): BubblePos {
   const r = anchor.getBoundingClientRect();
   return {
-    left: r.left + r.width / 2,
-    top: r.top + Math.min(r.height * 0.1, 28),
+    left: r.left - sceneRect.left + r.width / 2,
+    top: r.top - sceneRect.top + Math.min(r.height * 0.1, 28),
   };
 }
 
@@ -76,8 +76,8 @@ function computeMascotPositions(
   }
 
   return {
-    boyLeft: boyLeft + sceneRect.left,
-    girlLeft: girlLeft + sceneRect.left,
+    boyLeft,
+    girlLeft,
     width: mascotWidth,
   };
 }
@@ -153,8 +153,8 @@ export function ClassroomQuizMascots({
           : next,
       );
 
-      setBoyPos(boyAnchor && boyBubble ? measureBubble(boyAnchor) : null);
-      setGirlPos(girlAnchor && girlBubble ? measureBubble(girlAnchor) : null);
+      setBoyPos(boyAnchor && boyBubble ? measureBubble(boyAnchor, sceneRect) : null);
+      setGirlPos(girlAnchor && girlBubble ? measureBubble(girlAnchor, sceneRect) : null);
     };
 
     const attach = () => {
@@ -202,11 +202,10 @@ export function ClassroomQuizMascots({
   ]);
 
   const sceneEl = sceneRef.current;
-  const bubbleHost = typeof document !== 'undefined' ? document.body : null;
   const isLargeBubble = dialogueTone === 'outcome' || dialogueTone === 'thinking';
 
   const bubblesPortal =
-    bubbleHost &&
+    sceneEl &&
     (boyBubble || girlBubble) &&
     createPortal(
       <div
@@ -226,7 +225,7 @@ export function ClassroomQuizMascots({
               outcomeBubbleVariant === 'encourage' &&
                 'classroom-quiz-mascot-bubble--outcome-encourage',
             )}
-            style={{ left: boyPos.left, top: boyPos.top, position: 'fixed' }}
+            style={{ left: boyPos.left, top: boyPos.top, position: 'absolute' }}
           >
             {boyBubble}
           </div>
@@ -241,13 +240,13 @@ export function ClassroomQuizMascots({
               outcomeBubbleVariant === 'encourage' &&
                 'classroom-quiz-mascot-bubble--outcome-encourage',
             )}
-            style={{ left: girlPos.left, top: girlPos.top, position: 'fixed' }}
+            style={{ left: girlPos.left, top: girlPos.top, position: 'absolute' }}
           >
             {girlBubble}
           </div>
         ) : null}
       </div>,
-      bubbleHost,
+      sceneEl,
     );
 
   const mascotsPortal =
