@@ -131,6 +131,14 @@ export function ClassroomQuizMascots({
       if (!scene || !stage || !video || !board) return;
 
       const sceneRect = scene.getBoundingClientRect();
+      const sceneScaleX =
+        scene.offsetWidth > 0 ? sceneRect.width / scene.offsetWidth : 1;
+      const sceneScaleY =
+        scene.offsetHeight > 0 ? sceneRect.height / scene.offsetHeight : 1;
+      const safeScaleX =
+        Number.isFinite(sceneScaleX) && sceneScaleX > 0 ? sceneScaleX : 1;
+      const safeScaleY =
+        Number.isFinite(sceneScaleY) && sceneScaleY > 0 ? sceneScaleY : 1;
       const stageRect = stage.getBoundingClientRect();
       const videoRect = video.getBoundingClientRect();
       const boardRect = board.getBoundingClientRect();
@@ -144,17 +152,37 @@ export function ClassroomQuizMascots({
       );
       if (!next) return;
 
+      const normalized = {
+        boyLeft: next.boyLeft / safeScaleX,
+        girlLeft: next.girlLeft / safeScaleX,
+        width: next.width / safeScaleX,
+      };
+
       setPositions((prev) =>
         prev &&
-        prev.boyLeft === next.boyLeft &&
-        prev.girlLeft === next.girlLeft &&
-        prev.width === next.width
+        prev.boyLeft === normalized.boyLeft &&
+        prev.girlLeft === normalized.girlLeft &&
+        prev.width === normalized.width
           ? prev
-          : next,
+          : normalized,
       );
 
-      setBoyPos(boyAnchor && boyBubble ? measureBubble(boyAnchor, sceneRect) : null);
-      setGirlPos(girlAnchor && girlBubble ? measureBubble(girlAnchor, sceneRect) : null);
+      setBoyPos(
+        boyAnchor && boyBubble
+          ? (() => {
+              const p = measureBubble(boyAnchor, sceneRect);
+              return { left: p.left / safeScaleX, top: p.top / safeScaleY };
+            })()
+          : null,
+      );
+      setGirlPos(
+        girlAnchor && girlBubble
+          ? (() => {
+              const p = measureBubble(girlAnchor, sceneRect);
+              return { left: p.left / safeScaleX, top: p.top / safeScaleY };
+            })()
+          : null,
+      );
     };
 
     const attach = () => {
