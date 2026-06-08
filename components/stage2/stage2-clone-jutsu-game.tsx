@@ -1013,7 +1013,8 @@ export function Stage2CloneJutsuGame({
     const heroes = heroesRef.current;
     const redHero = heroes?.querySelector<HTMLElement>('.stage2-hero--red');
     const target = arena?.querySelector<HTMLElement>(`[data-clone-id="${targetId}"]`);
-    if (!arena || !redHero || !target) return;
+    const scale = canvasScale > 0 ? canvasScale : 1;
+    if (!arena || !redHero || !target || !Number.isFinite(scale)) return;
 
     shurikenFxTimersRef.current.forEach((id) => window.clearTimeout(id));
     shurikenFxTimersRef.current = [];
@@ -1023,10 +1024,10 @@ export function Stage2CloneJutsuGame({
     const redHeroRect = redHero.getBoundingClientRect();
     const targetRect = target.getBoundingClientRect();
 
-    const fromX = redHeroRect.left + redHeroRect.width / 2 - arenaRect.left;
-    const fromY = redHeroRect.top + redHeroRect.height * 0.32 - arenaRect.top;
-    const toX = targetRect.left + targetRect.width / 2 - arenaRect.left;
-    const toY = targetRect.top + targetRect.height * 0.25 - arenaRect.top;
+    const fromX = (redHeroRect.left + redHeroRect.width / 2 - arenaRect.left) / scale;
+    const fromY = (redHeroRect.top + redHeroRect.height * 0.32 - arenaRect.top) / scale;
+    const toX = (targetRect.left + targetRect.width / 2 - arenaRect.left) / scale;
+    const toY = (targetRect.top + targetRect.height * 0.25 - arenaRect.top) / scale;
 
     const id = ++shurikenIdRef.current;
     setRedBoyThrowTick((t) => t + 1);
@@ -1044,7 +1045,7 @@ export function Stage2CloneJutsuGame({
     scheduleFx(() => setShurikens([]), STAGE2_SHURIKEN_FLY_MS + 40);
 
     scheduleFx(() => setHitCloneId(null), STAGE2_SHURIKEN_FLY_MS + 360);
-  }, []);
+  }, [canvasScale]);
 
   const handlePickClone = useCallback(
     (clone: CloneOption) => {
