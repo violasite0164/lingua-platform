@@ -28,6 +28,11 @@
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
+  background-color: #0a0612;
+  background-image: url('/games/stage3/disco-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .stage3-fixed-canvas {
