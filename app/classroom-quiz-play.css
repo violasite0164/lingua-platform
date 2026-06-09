@@ -57,6 +57,9 @@
 .classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
   flex: 0 0 auto;
   max-height: none;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
 }
 
 .classroom-quiz-theme-shell--themed .classroom-quiz-scene {
@@ -92,11 +95,12 @@
 }
 
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   width: 100%;
   min-height: 0;
-  max-height: min(52vh, calc(100vh - 14rem));
+  max-height: none;
   height: auto;
+  aspect-ratio: 16 / 9;
 }
 
 
@@ -948,11 +952,11 @@
 }
 
 .classroom-quiz-stage--vocab-only .classroom-quiz-video-wrap {
-  flex: 1;
+  flex: 0 0 auto;
   width: 100%;
-  min-height: min(58vh, 540px);
+  min-height: 0;
   height: auto;
-  aspect-ratio: auto;
+  aspect-ratio: 16 / 9;
 }
 
 
