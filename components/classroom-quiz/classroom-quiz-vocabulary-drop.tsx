@@ -210,23 +210,30 @@ export function ClassroomQuizVocabularyDrop({
     };
 
     if (isThreeDMode) {
-      const ar = arenaRef.current?.getBoundingClientRect();
+      const arenaEl = arenaRef.current;
+      const ar = arenaEl?.getBoundingClientRect();
+      const scaleX =
+        ar && arenaEl && arenaEl.offsetWidth > 0 ? ar.width / arenaEl.offsetWidth : 1;
+      const scaleY =
+        ar && arenaEl && arenaEl.offsetHeight > 0 ? ar.height / arenaEl.offsetHeight : 1;
       setDropZoneStyle({
-        left: zoneLeft - (ar?.left ?? 0),
-        top: zoneTop - (ar?.top ?? 0),
-        width,
-        height,
+        left: (zoneLeft - (ar?.left ?? 0)) / (scaleX || 1),
+        top: (zoneTop - (ar?.top ?? 0)) / (scaleY || 1),
+        width: width / (scaleX || 1),
+        height: height / (scaleY || 1),
         opacity: 1,
       });
       return;
     }
 
     const sr = scene.getBoundingClientRect();
+    const sceneScaleX = scene.offsetWidth > 0 ? sr.width / scene.offsetWidth : 1;
+    const sceneScaleY = scene.offsetHeight > 0 ? sr.height / scene.offsetHeight : 1;
     setDropZoneStyle({
-      left: zoneLeft - sr.left,
-      top: zoneTop - sr.top,
-      width,
-      height,
+      left: (zoneLeft - sr.left) / (sceneScaleX || 1),
+      top: (zoneTop - sr.top) / (sceneScaleY || 1),
+      width: width / (sceneScaleX || 1),
+      height: height / (sceneScaleY || 1),
       opacity: 1,
     });
   }, [isThreeDMode, sceneRef, videoRef]);
