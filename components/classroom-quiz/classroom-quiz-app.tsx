@@ -34,7 +34,6 @@ import type { ClassroomQuizQuestionBlock } from '@/lib/course-quiz/play-segments
 const CLASSROOM_QUIZ_CANVAS_BASE_WIDTH = 1280;
 const CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT = 720;
 const CLASSROOM_QUIZ_COVER_ZOOM = 1;
-const CLASSROOM_QUIZ_FULLSCREEN_ZOOM = 1.18;
 
 function initialPhaseForBlock(block: ClassroomQuizQuestionBlock | undefined): ClassroomQuizPlayPhase {
   if (!block) return 'question';
@@ -141,35 +140,22 @@ export function ClassroomQuizApp({
       const w = viewport.clientWidth;
       const h = viewport.clientHeight;
       if (w <= 0 || h <= 0) return;
-      const shell = viewport.closest('[data-game-shell]');
-      const fullscreenEl = document.fullscreenElement as Element | null;
-      const isShellFullscreen =
-        !!fullscreenEl &&
-        !!shell &&
-        (fullscreenEl === shell || fullscreenEl.contains(shell));
       // Cover scaling for classroom quiz:
       // keep fixed 1280x720 scene and scale to fill viewport demand.
       const next = Math.max(
         w / CLASSROOM_QUIZ_CANVAS_BASE_WIDTH,
         h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT,
       );
-      // In fullscreen, apply an extra zoom step so the scene
-      // is visibly larger than the non-fullscreen view.
-      const fullscreenBoost = isShellFullscreen ? CLASSROOM_QUIZ_FULLSCREEN_ZOOM : 1;
-      const clamped = Math.max(0.2, Math.min(next * CLASSROOM_QUIZ_COVER_ZOOM * fullscreenBoost, 4));
+      const clamped = Math.max(0.2, Math.min(next * CLASSROOM_QUIZ_COVER_ZOOM, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
     updateScale();
     const ro = new ResizeObserver(updateScale);
     ro.observe(viewport);
     window.addEventListener('resize', updateScale);
-    document.addEventListener('fullscreenchange', updateScale);
-    document.addEventListener('webkitfullscreenchange', updateScale);
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', updateScale);
-      document.removeEventListener('fullscreenchange', updateScale);
-      document.removeEventListener('webkitfullscreenchange', updateScale);
     };
   }, [useFixedCanvas]);
 

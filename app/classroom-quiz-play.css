@@ -26,6 +26,15 @@
   will-change: transform;
 }
 
+/*
+ * Fullscreen boost must be CSS-driven (not JS detection),
+ * so entering GameShell fullscreen always yields a visibly larger scene.
+ */
+[data-game-shell]:fullscreen .classroom-quiz-fixed-canvas,
+[data-game-shell][data-is-fullscreen='true'] .classroom-quiz-fixed-canvas {
+  transform: translateX(-50%) scale(calc(var(--classroom-quiz-canvas-scale, 1) * 1.22));
+}
+
 .classroom-quiz-theme-shell--fixed {
   position: relative;
   width: 1280px;
