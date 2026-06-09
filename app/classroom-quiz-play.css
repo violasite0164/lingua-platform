@@ -7,8 +7,10 @@
 }
 
 .classroom-quiz-fixed-viewport {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   background-color: #f8f3ea;
 }

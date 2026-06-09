@@ -136,16 +136,12 @@ export function ClassroomQuizApp({
     const viewport = viewportRef.current;
     if (!viewport) return;
     const updateScale = () => {
-      const w = viewport.clientWidth;
       const h = viewport.clientHeight;
-      if (w <= 0 || h <= 0) return;
-      // Retro cover mode: keep fixed 1280x720 canvas and scale up
-      // by viewport demand so the scene truly fills the game area.
-      const next = Math.max(
-        w / CLASSROOM_QUIZ_CANVAS_BASE_WIDTH,
-        h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT,
-      );
-      const clamped = Math.max(0.2, Math.min(next, 4));
+      if (h <= 0) return;
+      // Match Stage1/2/3 old-game scaling:
+      // fixed 1280x720 canvas, height-driven scale, top aligned.
+      const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
+      const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
     updateScale();

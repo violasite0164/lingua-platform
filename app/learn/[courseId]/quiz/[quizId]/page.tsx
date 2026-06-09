@@ -56,7 +56,7 @@ export default async function LearnCourseQuizPage({
   }
 
   return (
-    <MobileLandscapeEnforcer className="flex min-h-[calc(100dvh-3.5rem)] w-full flex-1 flex-col">
+    <MobileLandscapeEnforcer className="flex h-[calc(100dvh-3.5rem)] min-h-0 w-full flex-1 flex-col">
       <ClassroomQuizApp
         courseId={courseId}
         quiz={pack.quiz}
