@@ -35,10 +35,6 @@ import {
   playQuizVocabLettersDrop,
   recoverQuizAudio,
 } from '@/lib/quiz/rpg-audio';
-import {
-  isGameShellFullscreenPortal,
-  useGamePortalRoot,
-} from '@/lib/hooks/use-game-portal-root';
 import type { CourseQuizPlayTheme, CourseQuizVocabularyDisplay } from '@/types/database.types';
 import { cn } from '@/lib/utils';
 
@@ -113,7 +109,12 @@ export function ClassroomQuizVocabularyDrop({
   const [dropZoneStyle, setDropZoneStyle] = useState<CSSProperties>({ opacity: 0 });
   const [arenaSize, setArenaSize] = useState({ w: 0, h: 0 });
   const [pendingPickIndex, setPendingPickIndex] = useState<number | null>(null);
-  const [announceFrame, setAnnounceFrame] = useState<DOMRect | null>(null);
+  const [announceRect, setAnnounceRect] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
   const chipSpecs = useMemo(
     () =>
@@ -139,8 +140,6 @@ export function ClassroomQuizVocabularyDrop({
   const spawnTokenRef = useRef(0);
   const [spawnToken, setSpawnToken] = useState(0);
   const lastCollisionSfxAtRef = useRef(0);
-  const portalRoot = useGamePortalRoot();
-  const inShellFullscreen = isGameShellFullscreenPortal(portalRoot);
   const [scenePortalEl, setScenePortalEl] = useState<HTMLElement | null>(null);
 
   useLayoutEffect(() => {
@@ -176,9 +175,21 @@ export function ClassroomQuizVocabularyDrop({
   );
 
   const syncAnnounceFrame = useCallback(() => {
+    const scene = sceneRef.current;
     const video = videoRef.current;
-    setAnnounceFrame(video ? video.getBoundingClientRect() : null);
-  }, [videoRef]);
+    if (!scene || !video) {
+      setAnnounceRect(null);
+      return;
+    }
+    const sr = scene.getBoundingClientRect();
+    const vr = video.getBoundingClientRect();
+    setAnnounceRect({
+      left: vr.left - sr.left,
+      top: vr.top - sr.top,
+      width: vr.width,
+      height: vr.height,
+    });
+  }, [sceneRef, videoRef]);
 
   const updateDropZoneLayout = useCallback(() => {
     const scene = sceneRef.current;
@@ -703,16 +714,14 @@ export function ClassroomQuizVocabularyDrop({
 
   const pickupAnnouncePortal =
     phase === 'announce' &&
-    announceFrame &&
-    portalRoot &&
-    createPortal(
+    announceRect && (
       <div
         className="classroom-quiz-vocab-pickup-announce-portal"
         style={{
-          top: announceFrame.top,
-          left: announceFrame.left,
-          width: announceFrame.width,
-          height: announceFrame.height,
+          top: announceRect.top,
+          left: announceRect.left,
+          width: announceRect.width,
+          height: announceRect.height,
         }}
       >
         <ClassroomQuizOutcomeAnnounce
@@ -720,8 +729,7 @@ export function ClassroomQuizVocabularyDrop({
           onDone={handlePickupAnnounceDone}
           sfxMode="start"
         />
-      </div>,
-      portalRoot,
+      </div>
     );
 
   const layer = (
@@ -729,16 +737,10 @@ export function ClassroomQuizVocabularyDrop({
       className={cn(
         'classroom-quiz-vocab-layer',
         isThreeDMode && scenePortalEl && 'classroom-quiz-vocab-layer--scene',
-        isThreeDMode &&
-          !scenePortalEl &&
-          'classroom-quiz-vocab-layer--fullscreen',
-        isThreeDMode &&
-          !scenePortalEl &&
-          inShellFullscreen &&
-          'classroom-quiz-vocab-layer--game-fullscreen',
       )}
       aria-label="Vocabulary drop answers"
     >
+      {pickupAnnouncePortal}
       {process.env.NODE_ENV === 'development' && isAdmin ? (
         <div
           style={{
@@ -819,24 +821,13 @@ glInvalidate=${Boolean(threeInvalidateRef.current)}`}
   if (isThreeDMode && scenePortalEl) {
     return (
       <>
-        {pickupAnnouncePortal}
         {createPortal(layer, scenePortalEl)}
-      </>
-    );
-  }
-
-  if (isThreeDMode && portalRoot) {
-    return (
-      <>
-        {pickupAnnouncePortal}
-        {createPortal(layer, portalRoot)}
       </>
     );
   }
 
   return (
     <>
-      {pickupAnnouncePortal}
       {layer}
     </>
   );
