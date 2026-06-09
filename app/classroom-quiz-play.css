@@ -40,6 +40,15 @@
   overflow: hidden;
 }
 
+.classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-stage.classroom-quiz-stage--with-answers {
+  padding-bottom: 120px;
+}
+
+.classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
+  flex: 0 0 auto;
+  max-height: none;
+}
+
 .classroom-quiz-theme-shell--themed .classroom-quiz-scene {
   background: rgba(255, 255, 255, 0.08);
   border-radius: 0.75rem;
@@ -159,11 +168,21 @@
   object-fit: contain;
 }
 
+.classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--boy .classroom-quiz-mascot-img--static {
+  height: 340px;
+  max-height: 340px;
+}
+
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--girl .classroom-quiz-mascot-img--static {
   width: 100%;
   height: min(48vh, 440px);
   max-height: min(48vh, 440px);
   object-fit: contain;
+}
+
+.classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--girl .classroom-quiz-mascot-img--static {
+  height: 365px;
+  max-height: 365px;
 }
 
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot-side {
@@ -172,6 +191,10 @@
 
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot-side--right {
   bottom: clamp(-20px, -2vh, -6px);
+}
+
+.classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot-side--right {
+  bottom: -8px;
 }
 
 

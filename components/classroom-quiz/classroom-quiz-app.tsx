@@ -33,7 +33,7 @@ import type { ClassroomQuizQuestionBlock } from '@/lib/course-quiz/play-segments
 
 const CLASSROOM_QUIZ_CANVAS_BASE_WIDTH = 1280;
 const CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT = 720;
-const CLASSROOM_QUIZ_COVER_ZOOM = 1.12;
+const CLASSROOM_QUIZ_COVER_ZOOM = 1.5;
 
 function initialPhaseForBlock(block: ClassroomQuizQuestionBlock | undefined): ClassroomQuizPlayPhase {
   if (!block) return 'question';
