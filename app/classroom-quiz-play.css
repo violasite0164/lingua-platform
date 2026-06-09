@@ -31,6 +31,7 @@
  * so entering GameShell fullscreen always yields a visibly larger scene.
  */
 [data-game-shell]:fullscreen .classroom-quiz-fixed-canvas,
+[data-game-shell]:-webkit-full-screen .classroom-quiz-fixed-canvas,
 [data-game-shell][data-is-fullscreen='true'] .classroom-quiz-fixed-canvas {
   transform: translateX(-50%) scale(calc(var(--classroom-quiz-canvas-scale, 1) * 1.22));
 }

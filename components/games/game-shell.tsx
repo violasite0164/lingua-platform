@@ -98,6 +98,7 @@ export function GameShell({
     <div
       ref={shellRef}
       data-game-shell
+      data-is-fullscreen={isFullscreen ? 'true' : 'false'}
       className={cn(
         'relative isolate flex min-h-0 w-full flex-1 flex-col bg-background',
       )}
