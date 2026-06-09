@@ -136,12 +136,16 @@ export function ClassroomQuizApp({
     const viewport = viewportRef.current;
     if (!viewport) return;
     const updateScale = () => {
+      const w = viewport.clientWidth;
       const h = viewport.clientHeight;
-      if (h <= 0) return;
-      // Match Stage1/2/3 old-game scaling:
-      // fixed 1280x720 canvas, height-driven scale, top aligned.
-      const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
-      const clamped = Math.max(0.2, Math.min(next, 3));
+      if (w <= 0 || h <= 0) return;
+      // Cover scaling for classroom quiz:
+      // keep fixed 1280x720 scene and scale to fill viewport demand.
+      const next = Math.max(
+        w / CLASSROOM_QUIZ_CANVAS_BASE_WIDTH,
+        h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT,
+      );
+      const clamped = Math.max(0.2, Math.min(next, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
     updateScale();
@@ -444,7 +448,7 @@ export function ClassroomQuizApp({
       cornerControl={classroomBgmCorner}
     >
       {useFixedCanvas ? (
-        <div className="relative flex min-h-0 flex-1">
+        <div className="relative flex h-full min-h-0 w-full flex-1">
           <div ref={viewportRef} className="classroom-quiz-fixed-viewport" style={fixedViewportStyle}>
             <div
               className="classroom-quiz-fixed-canvas"
