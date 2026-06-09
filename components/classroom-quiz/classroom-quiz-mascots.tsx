@@ -87,6 +87,7 @@ export function ClassroomQuizMascots({
   stageRef,
   videoRef,
   boardRef,
+  layoutKey,
   characterMood,
   boyBubble,
   girlBubble,
@@ -101,6 +102,8 @@ export function ClassroomQuizMascots({
   stageRef: React.RefObject<HTMLElement | null>;
   videoRef: React.RefObject<HTMLElement | null>;
   boardRef: React.RefObject<HTMLElement | null>;
+  /** Force re-measure when parent layout phase changes */
+  layoutKey?: string;
   characterMood: QuizCharacterMood;
   boyBubble?: string | null;
   girlBubble?: string | null;
@@ -222,6 +225,7 @@ export function ClassroomQuizMascots({
     stageRef,
     videoRef,
     boardRef,
+    layoutKey,
     boyAnchor,
     girlAnchor,
     boyBubble,
