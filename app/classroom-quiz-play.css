@@ -9,7 +9,8 @@
 .classroom-quiz-fixed-viewport {
   position: relative;
   width: 100%;
-  min-height: 0;
+  height: 100%;
+  min-height: 100%;
   flex: 1 1 auto;
   overflow: hidden;
 }
@@ -26,10 +27,12 @@
 }
 
 .classroom-quiz-theme-shell--fixed {
+  position: relative;
   width: 1280px;
   min-height: 720px;
   height: 720px;
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .classroom-quiz-theme-shell--themed .classroom-quiz-scene {
@@ -180,6 +183,7 @@
   display: flex;
   min-height: 0;
   flex: 1;
+  height: 100%;
   flex-direction: column;
   width: 100%;
 }
@@ -189,9 +193,10 @@
   display: flex;
   min-height: 0;
   flex: 1;
+  height: 100%;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: stretch;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 0.25rem clamp(0.5rem, 4vw, 3rem) 0.5rem;
@@ -303,7 +308,8 @@
   display: flex;
   width: 100%;
   max-width: min(100%, 920px);
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   flex-direction: column;
   margin: 0 auto;
   box-sizing: border-box;
@@ -316,7 +322,8 @@
   flex-direction: column;
   gap: 0.35rem;
   width: 100%;
-  flex-shrink: 0;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .classroom-quiz-video-wrap {
@@ -563,6 +570,7 @@
   position: relative;
   z-index: 8;
   flex-shrink: 0;
+  margin-top: auto;
   width: 100%;
   display: flex;
   align-items: flex-end;
@@ -972,7 +980,7 @@
 .classroom-quiz-vocab-three-canvas-wrap {
   position: absolute;
   inset: 0;
-  z-index: 22;
+  z-index: 18;
   pointer-events: none;
 }
 
@@ -985,7 +993,7 @@
 .classroom-quiz-vocab-gl-recovering {
   position: absolute;
   inset: 0;
-  z-index: 23;
+  z-index: 19;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1006,7 +1014,7 @@
   cursor: default;
   touch-action: none;
   pointer-events: auto;
-  z-index: 24;
+  z-index: 20;
 }
 
 .classroom-quiz-vocab-letter-hit--pickable {
@@ -1015,7 +1023,7 @@
 
 .classroom-quiz-vocab-letter-hit--held {
   cursor: grabbing;
-  z-index: 60;
+  z-index: 21;
 }
 
 .classroom-quiz-vocab-drop-zone {
