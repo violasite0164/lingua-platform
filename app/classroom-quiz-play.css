@@ -7,12 +7,10 @@
 }
 
 .classroom-quiz-fixed-viewport {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 100%;
-  flex: 1 1 auto;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
+  background-color: #f8f3ea;
 }
 
 .classroom-quiz-fixed-canvas {
@@ -980,7 +978,7 @@
 .classroom-quiz-vocab-three-canvas-wrap {
   position: absolute;
   inset: 0;
-  z-index: 18;
+  z-index: 26;
   pointer-events: none;
 }
 
@@ -993,7 +991,7 @@
 .classroom-quiz-vocab-gl-recovering {
   position: absolute;
   inset: 0;
-  z-index: 19;
+  z-index: 27;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1014,7 +1012,7 @@
   cursor: default;
   touch-action: none;
   pointer-events: auto;
-  z-index: 20;
+  z-index: 28;
 }
 
 .classroom-quiz-vocab-letter-hit--pickable {
@@ -1023,7 +1021,7 @@
 
 .classroom-quiz-vocab-letter-hit--held {
   cursor: grabbing;
-  z-index: 21;
+  z-index: 31;
 }
 
 .classroom-quiz-vocab-drop-zone {

@@ -361,6 +361,14 @@ export function ClassroomQuizApp({
   const classroomBgmCorner = (
     <ClassroomQuizBgmCornerToggle className="pointer-events-auto absolute bottom-3 right-3 z-[500] sm:bottom-4 sm:right-4" />
   );
+  const fixedViewportStyle: CSSProperties | undefined = themeConfig.backgroundImageUrl
+    ? {
+        backgroundImage: `url(${themeConfig.backgroundImageUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : undefined;
 
   if (blocks.length === 0 && !finished) {
     return (
@@ -431,16 +439,17 @@ export function ClassroomQuizApp({
       cornerControl={classroomBgmCorner}
     >
       {useFixedCanvas ? (
-        <div ref={viewportRef} className="classroom-quiz-fixed-viewport">
-          <div
-            className="classroom-quiz-fixed-canvas"
-            style={{ '--classroom-quiz-canvas-scale': canvasScale } as CSSProperties}
-          >
-            <ClassroomQuizThemeShell
-              playTheme={playTheme}
-              playPhase={playPhase}
-              className="relative classroom-quiz-theme-shell--fixed"
+        <div className="relative flex min-h-0 flex-1">
+          <div ref={viewportRef} className="classroom-quiz-fixed-viewport" style={fixedViewportStyle}>
+            <div
+              className="classroom-quiz-fixed-canvas"
+              style={{ '--classroom-quiz-canvas-scale': canvasScale } as CSSProperties}
             >
+              <ClassroomQuizThemeShell
+                playTheme={playTheme}
+                playPhase={playPhase}
+                className="relative classroom-quiz-theme-shell--fixed"
+              >
               {playPhase !== 'intro' ? (
                 <ClassroomQuizPlay
                   isAdmin={isAdmin}
@@ -491,7 +500,8 @@ export function ClassroomQuizApp({
                   儲存進度…
                 </div>
               ) : null}
-            </ClassroomQuizThemeShell>
+              </ClassroomQuizThemeShell>
+            </div>
           </div>
         </div>
       ) : (
