@@ -33,6 +33,7 @@ import type { ClassroomQuizQuestionBlock } from '@/lib/course-quiz/play-segments
 
 const CLASSROOM_QUIZ_CANVAS_BASE_WIDTH = 1280;
 const CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT = 720;
+const CLASSROOM_QUIZ_COVER_ZOOM = 1.12;
 
 function initialPhaseForBlock(block: ClassroomQuizQuestionBlock | undefined): ClassroomQuizPlayPhase {
   if (!block) return 'question';
@@ -145,7 +146,9 @@ export function ClassroomQuizApp({
         w / CLASSROOM_QUIZ_CANVAS_BASE_WIDTH,
         h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT,
       );
-      const clamped = Math.max(0.2, Math.min(next, 4));
+      // Slight zoom-in ensures the whole game scene feels screen-filling,
+      // not just the inner video panel.
+      const clamped = Math.max(0.2, Math.min(next * CLASSROOM_QUIZ_COVER_ZOOM, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
     updateScale();
@@ -448,17 +451,16 @@ export function ClassroomQuizApp({
       cornerControl={classroomBgmCorner}
     >
       {useFixedCanvas ? (
-        <div className="relative flex h-full min-h-0 w-full flex-1">
-          <div ref={viewportRef} className="classroom-quiz-fixed-viewport" style={fixedViewportStyle}>
-            <div
-              className="classroom-quiz-fixed-canvas"
-              style={{ '--classroom-quiz-canvas-scale': canvasScale } as CSSProperties}
+        <div ref={viewportRef} className="classroom-quiz-fixed-viewport" style={fixedViewportStyle}>
+          <div
+            className="classroom-quiz-fixed-canvas"
+            style={{ '--classroom-quiz-canvas-scale': canvasScale } as CSSProperties}
+          >
+            <ClassroomQuizThemeShell
+              playTheme={playTheme}
+              playPhase={playPhase}
+              className="relative classroom-quiz-theme-shell--fixed"
             >
-              <ClassroomQuizThemeShell
-                playTheme={playTheme}
-                playPhase={playPhase}
-                className="relative classroom-quiz-theme-shell--fixed"
-              >
               {playPhase !== 'intro' ? (
                 <ClassroomQuizPlay
                   isAdmin={isAdmin}
@@ -509,8 +511,7 @@ export function ClassroomQuizApp({
                   儲存進度…
                 </div>
               ) : null}
-              </ClassroomQuizThemeShell>
-            </div>
+            </ClassroomQuizThemeShell>
           </div>
         </div>
       ) : (
