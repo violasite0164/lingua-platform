@@ -53,6 +53,7 @@ function computeMascotPositions(
   let girlLeft: number;
 
   const scale = Math.max(1, widthScale);
+  const boardUsable = boardRect.width >= 120 && boardRect.height >= 40;
 
   if (gutterMin >= 56 && Number.isFinite(gutterMin)) {
     mascotWidth = Math.min(400 * scale, Math.max(120, gutterMin * 0.92 * scale));
@@ -60,7 +61,7 @@ function computeMascotPositions(
     const girlCenter = stageRect.right - sceneRect.left + rightGutter / 2;
     boyLeft = boyCenter - mascotWidth / 2;
     girlLeft = girlCenter - mascotWidth / 2;
-  } else {
+  } else if (boardUsable) {
     const innerLeft = videoRect.left - sceneRect.left;
     const innerRight = videoRect.right - sceneRect.left;
     const boardLeft = boardRect.left - sceneRect.left;
@@ -73,7 +74,26 @@ function computeMascotPositions(
     const girlCenter = (boardRight + innerRight) / 2;
     boyLeft = boyCenter - mascotWidth / 2;
     girlLeft = girlCenter - mascotWidth / 2;
+  } else {
+    // When answer board is hidden/collapsed (e.g. after answer transition),
+    // avoid using invalid board rect and anchor mascots to video-side lanes.
+    const innerLeft = videoRect.left - sceneRect.left;
+    const innerRight = videoRect.right - sceneRect.left;
+    const leftLane = Math.max(0, innerLeft);
+    const rightLane = Math.max(0, sceneRect.width - innerRight);
+    const lane = Math.max(96, Math.min(leftLane, rightLane));
+
+    mascotWidth = Math.min(280 * scale, Math.max(96, lane * 0.9 * scale));
+
+    const boyCenter = leftLane / 2;
+    const girlCenter = innerRight + rightLane / 2;
+    boyLeft = boyCenter - mascotWidth / 2;
+    girlLeft = girlCenter - mascotWidth / 2;
   }
+
+  // Keep both mascots inside scene bounds in all layout states.
+  boyLeft = Math.max(0, Math.min(boyLeft, sceneRect.width - mascotWidth));
+  girlLeft = Math.max(0, Math.min(girlLeft, sceneRect.width - mascotWidth));
 
   return {
     boyLeft,
