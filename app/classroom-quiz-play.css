@@ -80,14 +80,6 @@
   height: auto;
 }
 
-.classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
-  flex: 0 0 auto;
-  min-height: 0;
-  max-height: none;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-}
 
 /* 答案列固定貼齊視窗底部（A/B/C/D 不被捲出畫面） */
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-answers-zone {
@@ -332,9 +324,6 @@
   justify-content: flex-start;
 }
 
-.classroom-quiz-theme-shell--fixed .classroom-quiz-stage {
-  justify-content: space-between;
-}
 
 .classroom-quiz-video-column {
   display: flex;
