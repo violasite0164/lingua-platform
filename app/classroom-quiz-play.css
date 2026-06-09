@@ -305,7 +305,7 @@
   position: relative;
   display: flex;
   width: 100%;
-  max-width: min(100%, 920px);
+  max-width: 100%;
   flex: 1 1 auto;
   min-height: 0;
   flex-direction: column;
@@ -578,7 +578,7 @@
 .classroom-quiz-board {
   position: relative;
   z-index: 10;
-  width: min(92%, 600px);
+  width: min(92%, 760px);
   flex-shrink: 0;
   padding: 0.25rem 0 0;
   margin-bottom: 0;

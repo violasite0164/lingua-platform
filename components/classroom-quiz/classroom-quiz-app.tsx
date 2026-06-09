@@ -31,6 +31,9 @@ import type {
 } from '@/types/database.types';
 import type { ClassroomQuizQuestionBlock } from '@/lib/course-quiz/play-segments';
 
+const CLASSROOM_QUIZ_CANVAS_BASE_WIDTH = 1280;
+const CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT = 720;
+
 function initialPhaseForBlock(block: ClassroomQuizQuestionBlock | undefined): ClassroomQuizPlayPhase {
   if (!block) return 'question';
   if (block.question.cf_video_uid) return 'video';
@@ -133,10 +136,16 @@ export function ClassroomQuizApp({
     const viewport = viewportRef.current;
     if (!viewport) return;
     const updateScale = () => {
+      const w = viewport.clientWidth;
       const h = viewport.clientHeight;
-      if (h <= 0) return;
-      const next = h / 720;
-      const clamped = Math.max(0.2, Math.min(next, 3));
+      if (w <= 0 || h <= 0) return;
+      // Retro cover mode: keep fixed 1280x720 canvas and scale up
+      // by viewport demand so the scene truly fills the game area.
+      const next = Math.max(
+        w / CLASSROOM_QUIZ_CANVAS_BASE_WIDTH,
+        h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT,
+      );
+      const clamped = Math.max(0.2, Math.min(next, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
     updateScale();
