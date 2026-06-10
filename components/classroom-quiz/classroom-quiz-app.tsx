@@ -371,14 +371,7 @@ export function ClassroomQuizApp({
   const classroomBgmCorner = (
     <ClassroomQuizBgmCornerToggle className="pointer-events-auto absolute bottom-3 right-3 z-[500] sm:bottom-4 sm:right-4" />
   );
-  const fixedViewportStyle: CSSProperties | undefined = themeConfig.backgroundImageUrl
-    ? {
-        backgroundImage: `url(${themeConfig.backgroundImageUrl})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-      }
-    : undefined;
+  const fixedViewportStyle: CSSProperties | undefined = undefined;
 
   if (blocks.length === 0 && !finished) {
     return (

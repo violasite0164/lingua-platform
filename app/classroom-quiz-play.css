@@ -735,12 +735,12 @@
 
 .classroom-quiz-mascot-bubble--boy {
   transform: translate(0, calc(-100% - 4px));
-  margin-left: 1.35rem;
+  margin-left: 1.75rem;
 }
 
 .classroom-quiz-mascot-bubble--girl {
-  transform: translate(-100%, calc(-100% + 2px));
-  margin-left: -1.35rem;
+  transform: translate(-100%, calc(-100% + 8px));
+  margin-left: -1.75rem;
 }
 
 /* 思考中／答題後：較大對話氣泡（錨點在角色頭頂） */
@@ -765,7 +765,7 @@
 }
 
 .classroom-quiz-mascot-bubble--large.classroom-quiz-mascot-bubble--girl {
-  transform: translate(-50%, calc(-100% - 2px));
+  transform: translate(-50%, calc(-100% + 6px));
   animation-name: classroom-quiz-mascot-bubble-pop-girl;
 }
 
