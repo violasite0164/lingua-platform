@@ -82,6 +82,9 @@ export function ClassroomQuizThemeShell({
       onPointerDownCapture={config.bgmUrl ? activateBgm : undefined}
       style={{
         ...adventureThemeStyle,
+        ...(config.backgroundImageUrl
+          ? { backgroundImage: `url(${config.backgroundImageUrl})` }
+          : {}),
       }}
     >
       {children}
