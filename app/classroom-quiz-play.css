@@ -57,7 +57,8 @@
 .classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
   flex: 0 0 auto;
   max-height: none;
-  width: 100%;
+  width: min(90%, 980px);
+  margin-inline: auto;
   height: auto;
   aspect-ratio: 16 / 9;
 }
@@ -183,8 +184,8 @@
 }
 
 .classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--boy .classroom-quiz-mascot-img--static {
-  height: 340px;
-  max-height: 340px;
+  height: 390px;
+  max-height: 390px;
 }
 
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--girl .classroom-quiz-mascot-img--static {
@@ -195,8 +196,8 @@
 }
 
 .classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot--girl .classroom-quiz-mascot-img--static {
-  height: 365px;
-  max-height: 365px;
+  height: 430px;
+  max-height: 430px;
 }
 
 .classroom-quiz-theme-shell--kindergarten .classroom-quiz-mascot-side {
