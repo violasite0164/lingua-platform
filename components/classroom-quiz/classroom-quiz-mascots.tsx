@@ -35,7 +35,6 @@ function computeMascotPositions(
   sceneRect: DOMRect,
   stageRect: DOMRect,
   videoRect: DOMRect,
-  boardRect: DOMRect,
   widthScale = 1,
 ): MascotPositions | null {
   if (sceneRect.width <= 0 || stageRect.height <= 0) return null;
@@ -53,30 +52,15 @@ function computeMascotPositions(
   let girlLeft: number;
 
   const scale = Math.max(1, widthScale);
-  const boardUsable = boardRect.width >= 120 && boardRect.height >= 40;
-
   if (gutterMin >= 56 && Number.isFinite(gutterMin)) {
     mascotWidth = Math.min(400 * scale, Math.max(120, gutterMin * 0.92 * scale));
     const boyCenter = leftGutter / 2;
     const girlCenter = stageRect.right - sceneRect.left + rightGutter / 2;
     boyLeft = boyCenter - mascotWidth / 2;
     girlLeft = girlCenter - mascotWidth / 2;
-  } else if (boardUsable) {
-    const innerLeft = videoRect.left - sceneRect.left;
-    const innerRight = videoRect.right - sceneRect.left;
-    const boardLeft = boardRect.left - sceneRect.left;
-    const boardRight = boardRect.right - sceneRect.left;
-    mascotWidth = Math.min(
-      280 * scale,
-      Math.max(96, Math.min(boardLeft - innerLeft, innerRight - boardRight) * 0.82 * scale),
-    );
-    const boyCenter = (innerLeft + boardLeft) / 2;
-    const girlCenter = (boardRight + innerRight) / 2;
-    boyLeft = boyCenter - mascotWidth / 2;
-    girlLeft = girlCenter - mascotWidth / 2;
   } else {
-    // When answer board is hidden/collapsed (e.g. after answer transition),
-    // avoid using invalid board rect and anchor mascots to video-side lanes.
+    // Stable fallback: anchor mascots to video-side lanes only.
+    // This avoids answer-board transition states from shifting mascot positions.
     const innerLeft = videoRect.left - sceneRect.left;
     const innerRight = videoRect.right - sceneRect.left;
     const leftLane = Math.max(0, innerLeft);
@@ -164,13 +148,11 @@ export function ClassroomQuizMascots({
         Number.isFinite(sceneScaleY) && sceneScaleY > 0 ? sceneScaleY : 1;
       const stageRect = stage.getBoundingClientRect();
       const videoRect = video.getBoundingClientRect();
-      const boardRect = board.getBoundingClientRect();
 
       const next = computeMascotPositions(
         sceneRect,
         stageRect,
         videoRect,
-        boardRect,
         mascotWidthScale,
       );
       if (!next) return;
