@@ -183,11 +183,13 @@ export function ClassroomQuizVocabularyDrop({
     }
     const sr = scene.getBoundingClientRect();
     const vr = video.getBoundingClientRect();
+    const sceneScaleX = scene.offsetWidth > 0 ? sr.width / scene.offsetWidth : 1;
+    const sceneScaleY = scene.offsetHeight > 0 ? sr.height / scene.offsetHeight : 1;
     setAnnounceRect({
-      left: vr.left - sr.left,
-      top: vr.top - sr.top,
-      width: vr.width,
-      height: vr.height,
+      left: (vr.left - sr.left) / (sceneScaleX || 1),
+      top: (vr.top - sr.top) / (sceneScaleY || 1),
+      width: vr.width / (sceneScaleX || 1),
+      height: vr.height / (sceneScaleY || 1),
     });
   }, [sceneRef, videoRef]);
 
