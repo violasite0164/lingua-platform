@@ -57,7 +57,7 @@
 .classroom-quiz-theme-shell--fixed.classroom-quiz-theme-shell--kindergarten .classroom-quiz-video-wrap {
   flex: 0 0 auto;
   max-height: none;
-  width: min(84%, 900px);
+  width: min(80%, 860px);
   margin-inline: auto;
   height: auto;
   aspect-ratio: 16 / 9;
@@ -735,12 +735,12 @@
 
 .classroom-quiz-mascot-bubble--boy {
   transform: translate(0, calc(-100% - 4px));
-  margin-left: 0.95rem;
+  margin-left: 1.35rem;
 }
 
 .classroom-quiz-mascot-bubble--girl {
-  transform: translate(-100%, calc(-100% - 4px));
-  margin-left: -0.95rem;
+  transform: translate(-100%, calc(-100% + 2px));
+  margin-left: -1.35rem;
 }
 
 /* 思考中／答題後：較大對話氣泡（錨點在角色頭頂） */
@@ -765,7 +765,7 @@
 }
 
 .classroom-quiz-mascot-bubble--large.classroom-quiz-mascot-bubble--girl {
-  transform: translate(-50%, calc(-100% - 10px));
+  transform: translate(-50%, calc(-100% - 2px));
   animation-name: classroom-quiz-mascot-bubble-pop-girl;
 }
 
