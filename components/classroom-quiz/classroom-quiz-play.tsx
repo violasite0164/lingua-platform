@@ -716,7 +716,7 @@ export function ClassroomQuizPlay({
                 stageRef={stageRef}
                 videoRef={videoRef}
                 boardRef={boardRef}
-                layoutKey={`${playPhase}:${current.id}:${picked ?? 'none'}:${answeredThis ? 'answered' : 'pending'}`}
+                layoutKey={`${current.id}:${videoPlaybackAllowed ? 'video-on' : 'video-off'}`}
                 useStaticMascots={themeConfig.useStaticMascots}
                 mascotBoyImageUrl={mascotBoySrc}
                 mascotGirlImageUrl={mascotGirlSrc}

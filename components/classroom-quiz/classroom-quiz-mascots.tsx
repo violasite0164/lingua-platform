@@ -33,47 +33,31 @@ function measureBubble(anchor: HTMLElement, sceneRect: DOMRect): BubblePos {
 
 function computeMascotPositions(
   sceneRect: DOMRect,
-  stageRect: DOMRect,
   videoRect: DOMRect,
   widthScale = 1,
 ): MascotPositions | null {
-  if (sceneRect.width <= 0 || stageRect.height <= 0) return null;
-
-  const leftGutter = stageRect.left - sceneRect.left;
-  const rightGutter = sceneRect.right - stageRect.right;
-
-  const gutterMin = Math.min(
-    leftGutter > 0 ? leftGutter : Number.POSITIVE_INFINITY,
-    rightGutter > 0 ? rightGutter : Number.POSITIVE_INFINITY,
-  );
+  if (sceneRect.width <= 0 || videoRect.width <= 0 || videoRect.height <= 0) return null;
 
   let mascotWidth: number;
   let boyLeft: number;
   let girlLeft: number;
 
   const scale = Math.max(1, widthScale);
-  if (gutterMin >= 56 && Number.isFinite(gutterMin)) {
-    mascotWidth = Math.min(400 * scale, Math.max(120, gutterMin * 0.92 * scale));
-    const boyCenter = leftGutter / 2;
-    const girlCenter = stageRect.right - sceneRect.left + rightGutter / 2;
-    boyLeft = boyCenter - mascotWidth / 2;
-    girlLeft = girlCenter - mascotWidth / 2;
-  } else {
-    // Stable fallback: anchor mascots to video-side lanes only.
-    // This avoids answer-board transition states from shifting mascot positions.
-    const innerLeft = videoRect.left - sceneRect.left;
-    const innerRight = videoRect.right - sceneRect.left;
-    const leftLane = Math.max(0, innerLeft);
-    const rightLane = Math.max(0, sceneRect.width - innerRight);
-    const lane = Math.max(96, Math.min(leftLane, rightLane));
 
-    mascotWidth = Math.min(280 * scale, Math.max(96, lane * 0.9 * scale));
+  // Stable anchor model: always derive mascot lanes from video frame.
+  // This keeps positions unchanged across answer/result phase transitions.
+  const innerLeft = videoRect.left - sceneRect.left;
+  const innerRight = videoRect.right - sceneRect.left;
+  const leftLane = Math.max(0, innerLeft);
+  const rightLane = Math.max(0, sceneRect.width - innerRight);
+  const lane = Math.max(96, Math.min(leftLane, rightLane));
 
-    const boyCenter = leftLane / 2;
-    const girlCenter = innerRight + rightLane / 2;
-    boyLeft = boyCenter - mascotWidth / 2;
-    girlLeft = girlCenter - mascotWidth / 2;
-  }
+  mascotWidth = Math.min(360 * scale, Math.max(120, lane * 0.92 * scale));
+
+  const boyCenter = leftLane / 2;
+  const girlCenter = innerRight + rightLane / 2;
+  boyLeft = boyCenter - mascotWidth / 2;
+  girlLeft = girlCenter - mascotWidth / 2;
 
   // Keep both mascots inside scene bounds in all layout states.
   boyLeft = Math.max(0, Math.min(boyLeft, sceneRect.width - mascotWidth));
@@ -151,7 +135,6 @@ export function ClassroomQuizMascots({
 
       const next = computeMascotPositions(
         sceneRect,
-        stageRect,
         videoRect,
         mascotWidthScale,
       );
