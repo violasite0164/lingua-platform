@@ -66,7 +66,23 @@ const FEATURES = [
 export default function LoginPage() {
   const router       = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo   = searchParams?.get('redirect') ?? '/dashboard';
+  const redirectParam = searchParams?.get('redirect');
+  const redirectTo = (() => {
+    const fallback = '/dashboard';
+    const raw = redirectParam && redirectParam.startsWith('/') ? redirectParam : fallback;
+    const [pathnamePart, queryPart = ''] = raw.split('?', 2);
+    const redirectQuery = new URLSearchParams(queryPart);
+
+    for (const key of ['session_id', 'checkout', 'shop_kind']) {
+      const incoming = searchParams?.get(key);
+      if (incoming && !redirectQuery.has(key)) {
+        redirectQuery.set(key, incoming);
+      }
+    }
+
+    const finalQuery = redirectQuery.toString();
+    return finalQuery ? `${pathnamePart}?${finalQuery}` : pathnamePart;
+  })();
 
   // Read error injected by auth/callback on OAuth failure
   const urlError = searchParams?.get('error') ?? null;

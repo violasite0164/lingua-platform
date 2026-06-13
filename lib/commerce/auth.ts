@@ -17,13 +17,18 @@ export function canAccessCommerce(role: UserRole | string): boolean {
   return canManageCommerce(role);
 }
 
+function buildLoginRedirectPath(redirectPath: string): string {
+  const targetPath = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+  return `/login?redirect=${encodeURIComponent(targetPath)}`;
+}
+
 /** 商店前台 /commerce：已登入即可 */
 export async function requireCommerceShopAccess(
   redirectPath = '/commerce',
 ): Promise<Profile> {
   const profile = await getCurrentProfile();
   if (!profile) {
-    redirect(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+    redirect(buildLoginRedirectPath(redirectPath));
   }
   return profile;
 }
@@ -34,7 +39,7 @@ export async function requireCommerceManageAccess(
 ): Promise<Profile> {
   const profile = await getCurrentProfile();
   if (!profile) {
-    redirect(`/login?redirect=${encodeURIComponent(redirectPath)}`);
+    redirect(buildLoginRedirectPath(redirectPath));
   }
   if (!canManageCommerce(profile.role)) {
     redirect('/');

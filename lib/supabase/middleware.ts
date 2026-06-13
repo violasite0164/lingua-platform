@@ -222,10 +222,13 @@ export async function updateSession(request: NextRequest) {
 
   // ── 1. 未登入 → 存取保護路由 ──────────────────────────────────
   if (!user && isProtected(url.pathname)) {
+    const targetPathWithQuery = `${url.pathname}${url.search}`;
     const redirectUrl = url.clone();
     redirectUrl.pathname = '/login';
-    // 保存原始路徑，登入後可跳回
-    redirectUrl.searchParams.set('redirect', url.pathname);
+    // 登入頁只保留必要參數，避免 checkout 等參數誤留在 /login 上
+    redirectUrl.search = '';
+    // 保存原始路徑（含 query），登入後可完整跳回
+    redirectUrl.searchParams.set('redirect', targetPathWithQuery);
     return NextResponse.redirect(redirectUrl);
   }
 
