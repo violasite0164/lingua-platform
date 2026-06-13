@@ -136,10 +136,35 @@ export function ClassroomQuizApp({
     if (!useFixedCanvas) return;
     const viewport = viewportRef.current;
     if (!viewport) return;
+
+    let rafId: number | null = null;
+    let retryId: number | null = null;
+
     const updateScale = () => {
-      const w = viewport.clientWidth;
-      const h = viewport.clientHeight;
-      if (w <= 0 || h <= 0) return;
+      const rect = viewport.getBoundingClientRect();
+      const parentRect = viewport.parentElement?.getBoundingClientRect();
+      const w =
+        rect.width ||
+        viewport.clientWidth ||
+        parentRect?.width ||
+        window.innerWidth ||
+        0;
+      const h =
+        rect.height ||
+        viewport.clientHeight ||
+        parentRect?.height ||
+        window.innerHeight ||
+        0;
+
+      if (w <= 0 || h <= 0) {
+        if (retryId !== null) window.clearTimeout(retryId);
+        // Some layouts report 0 on the first frame; retry shortly.
+        retryId = window.setTimeout(() => {
+          retryId = null;
+          updateScale();
+        }, 50);
+        return;
+      }
       // Cover scaling for classroom quiz:
       // keep fixed 1280x720 scene and scale to fill viewport demand.
       const next = Math.max(
@@ -149,13 +174,36 @@ export function ClassroomQuizApp({
       const clamped = Math.max(0.2, Math.min(next * CLASSROOM_QUIZ_COVER_ZOOM, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
+
+    const scheduleUpdate = () => {
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        updateScale();
+      });
+    };
+
     updateScale();
-    const ro = new ResizeObserver(updateScale);
+    const ro = new ResizeObserver(scheduleUpdate);
     ro.observe(viewport);
-    window.addEventListener('resize', updateScale);
+    window.addEventListener('resize', scheduleUpdate);
+    window.addEventListener('orientationchange', scheduleUpdate);
+    document.addEventListener('fullscreenchange', scheduleUpdate);
+    document.addEventListener('webkitfullscreenchange', scheduleUpdate);
+    window.visualViewport?.addEventListener('resize', scheduleUpdate);
+
+    // Run one more pass after initial layout settles.
+    scheduleUpdate();
+
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', updateScale);
+      window.removeEventListener('resize', scheduleUpdate);
+      window.removeEventListener('orientationchange', scheduleUpdate);
+      document.removeEventListener('fullscreenchange', scheduleUpdate);
+      document.removeEventListener('webkitfullscreenchange', scheduleUpdate);
+      window.visualViewport?.removeEventListener('resize', scheduleUpdate);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
+      if (retryId !== null) window.clearTimeout(retryId);
     };
   }, [useFixedCanvas]);
 
