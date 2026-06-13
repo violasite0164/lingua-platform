@@ -32,12 +32,16 @@ type CheckoutBody =
     }
   | { kind: 'course'; courseId: string; shopItemId?: never; planCode?: never; returnTo?: never };
 
-function siteUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
-    'http://localhost:3000'
-  );
+function checkoutBaseUrlFromRequest(req: Request): string {
+  const forwardedHost = req.headers.get('x-forwarded-host');
+  const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  if (forwardedHost) {
+    const host = forwardedHost.split(',')[0].trim();
+    const proto = forwardedProto || 'https';
+    return `${proto}://${host}`;
+  }
+
+  return new URL(req.url).origin;
 }
 
 export async function POST(req: Request) {
@@ -58,7 +62,7 @@ export async function POST(req: Request) {
 
     const body = (await req.json()) as CheckoutBody;
     const stripe = getStripeServer();
-    const baseUrl = siteUrl();
+    const baseUrl = checkoutBaseUrlFromRequest(req);
     const requestOrigin = req.headers.get('origin') ?? req.headers.get('referer');
 
     if (body.kind === 'shop_item') {
