@@ -124,6 +124,10 @@ function requiredRoles(pathname: string): UserRole[] | null {
   return rule?.roles ?? null;
 }
 
+function isSafeInternalRedirect(target: string | null): target is string {
+  return typeof target === 'string' && target.startsWith('/') && !target.startsWith('//');
+}
+
 /** 從 profiles 表取得使用者角色（僅在需要角色驗證時呼叫，避免不必要的 DB 查詢） */
 async function resolveMiddlewareUser(
   supabase: SupabaseClient<Database>,
@@ -234,6 +238,10 @@ export async function updateSession(request: NextRequest) {
 
   // ── 2. 已登入 → 存取 auth 頁面（login / register）───────────
   if (user && isAuthOnlyPath(url.pathname)) {
+    const requestedRedirect = url.searchParams.get('redirect');
+    if (isSafeInternalRedirect(requestedRedirect)) {
+      return NextResponse.redirect(new URL(requestedRedirect, url.origin));
+    }
     const redirectUrl = url.clone();
     redirectUrl.pathname = '/dashboard';
     redirectUrl.search = '';

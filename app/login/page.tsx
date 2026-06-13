@@ -118,8 +118,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(redirectTo);
-    router.refresh();
+    router.replace(redirectTo);
   }
 
   // ── Google OAuth ──────────────────────────────────────────
