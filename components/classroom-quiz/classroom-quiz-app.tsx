@@ -86,7 +86,6 @@ export function ClassroomQuizApp({
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [viewportHeightPx, setViewportHeightPx] = useState<number | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const choiceMode = resolveChoiceMode(quiz);
@@ -141,21 +140,8 @@ export function ClassroomQuizApp({
 
     const updateScale = () => {
       const rect = viewport.getBoundingClientRect();
-      const shell = viewport.closest('[data-game-shell]');
-      const shellContent = shell?.querySelector('[data-game-shell-content]');
-      const shellContentEl =
-        shellContent instanceof HTMLElement ? shellContent : null;
-
-      const w =
-        rect.width ||
-        viewport.clientWidth ||
-        shellContentEl?.clientWidth ||
-        0;
-      const h =
-        shellContentEl?.clientHeight ||
-        rect.height ||
-        viewport.clientHeight ||
-        0;
+      const w = rect.width || viewport.clientWidth || 0;
+      const h = rect.height || viewport.clientHeight || 0;
 
       if (w <= 0 || h <= 0) {
         if (retryId !== null) window.clearTimeout(retryId);
@@ -171,7 +157,6 @@ export function ClassroomQuizApp({
       const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
       const clamped = Math.max(0.2, Math.min(next, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
-      setViewportHeightPx((prev) => (prev === h ? prev : h));
     };
 
     const scheduleUpdate = () => {
@@ -418,8 +403,7 @@ export function ClassroomQuizApp({
   const classroomBgmCorner = (
     <ClassroomQuizBgmCornerToggle className="pointer-events-auto absolute bottom-3 right-3 z-[500] sm:bottom-4 sm:right-4" />
   );
-  const fixedViewportStyle: CSSProperties | undefined =
-    viewportHeightPx !== null ? { height: `${viewportHeightPx}px` } : undefined;
+  const fixedViewportStyle: CSSProperties | undefined = undefined;
 
   if (blocks.length === 0 && !finished) {
     return (

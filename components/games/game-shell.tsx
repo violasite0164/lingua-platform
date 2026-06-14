@@ -142,7 +142,6 @@ export function GameShell({
         </div>
       </div>
       <div
-        data-game-shell-content
         className={cn(
           'relative z-0 flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto',
           pixelFont && [
