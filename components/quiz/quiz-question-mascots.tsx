@@ -92,8 +92,11 @@ export function QuizQuestionMascots({
         : sceneRect.width * 0.12;
 
       const nextLayout = {
-        leftInset: Math.max(4, leftGutter * 0.38),
-        rightInset: Math.max(2, rightGutter * 0.18),
+        // Stage 1 layout tuning:
+        // - Bear further left
+        // - Boy/Girl further right
+        leftInset: Math.max(2, leftGutter * 0.3),
+        rightInset: Math.max(1, rightGutter * 0.08),
       };
       setLayout((prev) =>
         prev &&
