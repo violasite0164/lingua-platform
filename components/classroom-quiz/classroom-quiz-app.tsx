@@ -139,11 +139,9 @@ export function ClassroomQuizApp({
     let retryId: number | null = null;
 
     const updateScale = () => {
-      const rect = viewport.getBoundingClientRect();
-      const w = rect.width || viewport.clientWidth || 0;
-      const h = rect.height || viewport.clientHeight || 0;
+      const h = viewport.clientHeight;
 
-      if (w <= 0 || h <= 0) {
+      if (h <= 0) {
         if (retryId !== null) window.clearTimeout(retryId);
         // Some layouts report 0 on the first frame; retry shortly.
         retryId = window.setTimeout(() => {
