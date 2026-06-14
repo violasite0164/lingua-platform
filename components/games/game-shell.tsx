@@ -115,6 +115,9 @@ export function GameShell({
           選單
         </Button>
         <span className="min-w-0 truncate text-xs font-medium text-muted-foreground">{title}</span>
+        <span className="shrink-0 rounded bg-red-500/90 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          DBG-33651f4
+        </span>
         {headerActions ? (
           <div className="flex shrink-0 items-center gap-1">{headerActions}</div>
         ) : null}
