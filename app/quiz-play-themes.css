@@ -636,13 +636,11 @@
 }
 
 .quiz-play-mascot-bubble--boy {
-  margin-left: 0.35rem;
-  transform: translateY(-8%);
+  transform: translate(-50%, calc(-100% - 6px));
 }
 
 .quiz-play-mascot-bubble--girl {
-  transform: translate(-100%, -8%);
-  margin-left: -0.35rem;
+  transform: translate(-50%, calc(-100% - 6px));
 }
 
 @media (max-width: 420px) {

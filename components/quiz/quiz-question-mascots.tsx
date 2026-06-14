@@ -25,25 +25,18 @@ function measureBubble(
   side: 'bear' | 'boy' | 'girl',
 ): BubblePos {
   const r = anchor.getBoundingClientRect();
-  const top = r.top - sceneRect.top + r.height * 0.06;
+  const centerX = r.left - sceneRect.left + r.width * 0.5;
 
   if (side === 'bear') {
     return {
-      left: r.left - sceneRect.left + r.width * 0.58,
-      top: r.top - sceneRect.top + r.height * 0.04,
-    };
-  }
-
-  if (side === 'girl') {
-    return {
-      left: r.left - sceneRect.left,
-      top,
+      left: r.left - sceneRect.left + r.width * 0.56,
+      top: r.top - sceneRect.top + r.height * 0.1,
     };
   }
 
   return {
-    left: r.right - sceneRect.left,
-    top,
+    left: centerX,
+    top: r.top - sceneRect.top + r.height * 0.14,
   };
 }
 
