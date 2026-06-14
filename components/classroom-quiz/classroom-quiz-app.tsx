@@ -142,19 +142,8 @@ export function ClassroomQuizApp({
 
     const updateScale = () => {
       const rect = viewport.getBoundingClientRect();
-      const parentRect = viewport.parentElement?.getBoundingClientRect();
-      const w =
-        rect.width ||
-        viewport.clientWidth ||
-        parentRect?.width ||
-        window.innerWidth ||
-        0;
-      const h =
-        rect.height ||
-        viewport.clientHeight ||
-        parentRect?.height ||
-        window.innerHeight ||
-        0;
+      const w = rect.width || viewport.clientWidth || 0;
+      const h = rect.height || viewport.clientHeight || 0;
 
       if (w <= 0 || h <= 0) {
         if (retryId !== null) window.clearTimeout(retryId);
