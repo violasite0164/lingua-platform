@@ -86,7 +86,7 @@ export function ClassroomQuizApp({
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [debugEnabled] = useState(true);
   const [scaleDebug, setScaleDebug] = useState<{
     viewportH: number;
     shellH: number;
@@ -136,11 +136,6 @@ export function ClassroomQuizApp({
   const currentBlock = blocks[blockIndex];
   const current = currentBlock?.question;
   const total = blocks.length;
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    setDebugEnabled(new URLSearchParams(window.location.search).get('cqdebug') === '1');
-  }, []);
 
   useLayoutEffect(() => {
     if (!useFixedCanvas) return;
@@ -515,7 +510,7 @@ export function ClassroomQuizApp({
               className="relative classroom-quiz-theme-shell--fixed"
             >
               {debugEnabled && scaleDebug ? (
-                <div className="absolute left-2 top-2 z-[1200] rounded bg-black/70 px-2 py-1 text-[11px] leading-tight text-white">
+                <div className="absolute left-2 top-2 z-[1200] rounded border border-red-300 bg-black/85 px-3 py-2 text-xs font-semibold leading-tight text-white shadow-lg">
                   {`shell:${scaleDebug.shellH} vp:${scaleDebug.viewportH} win:${scaleDebug.windowH} scale:${scaleDebug.scale.toFixed(3)}`}
                 </div>
               ) : null}
