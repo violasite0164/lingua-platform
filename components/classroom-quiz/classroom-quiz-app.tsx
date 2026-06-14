@@ -223,7 +223,7 @@ export function ClassroomQuizApp({
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       if (retryId !== null) window.clearTimeout(retryId);
     };
-  }, [debugEnabled, useFixedCanvas]);
+  }, [blocks.length, current, debugEnabled, finished, useFixedCanvas]);
 
   useEffect(() => bindClassroomQuizAudioRuntime(), []);
 
