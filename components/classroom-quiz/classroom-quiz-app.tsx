@@ -86,6 +86,13 @@ export function ClassroomQuizApp({
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
+  const [debugEnabled, setDebugEnabled] = useState(false);
+  const [scaleDebug, setScaleDebug] = useState<{
+    viewportH: number;
+    shellH: number;
+    windowH: number;
+    scale: number;
+  } | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const choiceMode = resolveChoiceMode(quiz);
@@ -130,6 +137,11 @@ export function ClassroomQuizApp({
   const current = currentBlock?.question;
   const total = blocks.length;
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setDebugEnabled(new URLSearchParams(window.location.search).get('cqdebug') === '1');
+  }, []);
+
   useLayoutEffect(() => {
     if (!useFixedCanvas) return;
     const viewport = viewportRef.current;
@@ -146,7 +158,9 @@ export function ClassroomQuizApp({
     }
 
     const updateScale = () => {
-      const h = shellContentEl?.clientHeight || viewport.clientHeight;
+      const viewportH = viewport.clientHeight;
+      const shellH = shellContentEl?.clientHeight ?? 0;
+      const h = shellH || viewportH;
 
       if (h <= 0) {
         if (retryId !== null) window.clearTimeout(retryId);
@@ -162,6 +176,14 @@ export function ClassroomQuizApp({
       const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
       const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
+      if (debugEnabled) {
+        setScaleDebug({
+          viewportH,
+          shellH,
+          windowH: window.innerHeight,
+          scale: clamped,
+        });
+      }
     };
 
     const scheduleUpdate = () => {
@@ -197,7 +219,7 @@ export function ClassroomQuizApp({
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       if (retryId !== null) window.clearTimeout(retryId);
     };
-  }, [useFixedCanvas]);
+  }, [debugEnabled, useFixedCanvas]);
 
   useEffect(() => bindClassroomQuizAudioRuntime(), []);
 
@@ -492,6 +514,11 @@ export function ClassroomQuizApp({
               playPhase={playPhase}
               className="relative classroom-quiz-theme-shell--fixed"
             >
+              {debugEnabled && scaleDebug ? (
+                <div className="absolute left-2 top-2 z-[1200] rounded bg-black/70 px-2 py-1 text-[11px] leading-tight text-white">
+                  {`shell:${scaleDebug.shellH} vp:${scaleDebug.viewportH} win:${scaleDebug.windowH} scale:${scaleDebug.scale.toFixed(3)}`}
+                </div>
+              ) : null}
               {playPhase !== 'intro' ? (
                 <ClassroomQuizPlay
                   isAdmin={isAdmin}
