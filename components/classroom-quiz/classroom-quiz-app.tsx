@@ -33,7 +33,6 @@ import type { ClassroomQuizQuestionBlock } from '@/lib/course-quiz/play-segments
 
 const CLASSROOM_QUIZ_CANVAS_BASE_WIDTH = 1280;
 const CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT = 720;
-const CLASSROOM_QUIZ_COVER_ZOOM = 1.18;
 
 function initialPhaseForBlock(block: ClassroomQuizQuestionBlock | undefined): ClassroomQuizPlayPhase {
   if (!block) return 'question';
@@ -154,13 +153,10 @@ export function ClassroomQuizApp({
         }, 50);
         return;
       }
-      // Cover scaling for classroom quiz:
-      // keep fixed 1280x720 scene and scale to fill viewport demand.
-      const next = Math.max(
-        w / CLASSROOM_QUIZ_CANVAS_BASE_WIDTH,
-        h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT,
-      );
-      const clamped = Math.max(0.2, Math.min(next * CLASSROOM_QUIZ_COVER_ZOOM, 4));
+      // Match legacy game scaling behavior: scale by viewport height,
+      // so the 1280x720 canvas stays flush from header-bottom to viewport-bottom.
+      const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
+      const clamped = Math.max(0.2, Math.min(next, 4));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
     };
 

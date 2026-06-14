@@ -18,11 +18,11 @@
 .classroom-quiz-fixed-canvas {
   position: absolute;
   left: 50%;
-  bottom: 0;
+  top: 0;
   width: 1280px;
   height: 720px;
   transform: translateX(-50%) scale(var(--classroom-quiz-canvas-scale, 1));
-  transform-origin: center bottom;
+  transform-origin: center top;
   will-change: transform;
 }
 
