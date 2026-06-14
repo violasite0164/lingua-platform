@@ -92,6 +92,7 @@ export function ClassroomQuizApp({
     shellH: number;
     windowH: number;
     scale: number;
+    note?: string;
   } | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -158,6 +159,13 @@ export function ClassroomQuizApp({
       const h = shellH || viewportH;
 
       if (h <= 0) {
+        setScaleDebug({
+          viewportH,
+          shellH,
+          windowH: window.innerHeight,
+          scale: 0,
+          note: 'height=0',
+        });
         if (retryId !== null) window.clearTimeout(retryId);
         // Some layouts report 0 on the first frame; retry shortly.
         retryId = window.setTimeout(() => {
@@ -177,6 +185,7 @@ export function ClassroomQuizApp({
           shellH,
           windowH: window.innerHeight,
           scale: clamped,
+          note: 'ok',
         });
       }
     };
@@ -500,6 +509,13 @@ export function ClassroomQuizApp({
     >
       {useFixedCanvas ? (
         <div ref={viewportRef} className="classroom-quiz-fixed-viewport" style={fixedViewportStyle}>
+          {debugEnabled ? (
+            <div className="absolute left-2 top-2 z-[2500] rounded border-2 border-red-300 bg-black/90 px-3 py-2 text-xs font-semibold leading-tight text-white shadow-xl">
+              {scaleDebug
+                ? `CQDEBUG shell:${scaleDebug.shellH} vp:${scaleDebug.viewportH} win:${scaleDebug.windowH} scale:${scaleDebug.scale.toFixed(3)} ${scaleDebug.note ?? ''}`
+                : 'CQDEBUG waiting...'}
+            </div>
+          ) : null}
           <div
             className="classroom-quiz-fixed-canvas"
             style={{ '--classroom-quiz-canvas-scale': canvasScale } as CSSProperties}
@@ -509,11 +525,6 @@ export function ClassroomQuizApp({
               playPhase={playPhase}
               className="relative classroom-quiz-theme-shell--fixed"
             >
-              {debugEnabled && scaleDebug ? (
-                <div className="absolute left-2 top-2 z-[1200] rounded border border-red-300 bg-black/85 px-3 py-2 text-xs font-semibold leading-tight text-white shadow-lg">
-                  {`shell:${scaleDebug.shellH} vp:${scaleDebug.viewportH} win:${scaleDebug.windowH} scale:${scaleDebug.scale.toFixed(3)}`}
-                </div>
-              ) : null}
               {playPhase !== 'intro' ? (
                 <ClassroomQuizPlay
                   isAdmin={isAdmin}
