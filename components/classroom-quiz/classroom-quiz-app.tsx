@@ -86,6 +86,7 @@ export function ClassroomQuizApp({
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
+  const [viewportHeightPx, setViewportHeightPx] = useState<number | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const choiceMode = resolveChoiceMode(quiz);
@@ -137,9 +138,16 @@ export function ClassroomQuizApp({
 
     let rafId: number | null = null;
     let retryId: number | null = null;
+    let shellContentEl: HTMLElement | null = null;
+
+    const shell = viewport.closest('[data-game-shell]');
+    const shellContent = shell?.querySelector('[data-game-shell-content]');
+    if (shellContent instanceof HTMLElement) {
+      shellContentEl = shellContent;
+    }
 
     const updateScale = () => {
-      const h = viewport.clientHeight;
+      const h = shellContentEl?.clientHeight || viewport.clientHeight;
 
       if (h <= 0) {
         if (retryId !== null) window.clearTimeout(retryId);
@@ -153,8 +161,9 @@ export function ClassroomQuizApp({
       // Match legacy game scaling behavior: scale by viewport height,
       // so the 1280x720 canvas stays flush from header-bottom to viewport-bottom.
       const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
-      const clamped = Math.max(0.2, Math.min(next, 4));
+      const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
+      setViewportHeightPx((prev) => (prev === h ? prev : h));
     };
 
     const scheduleUpdate = () => {
@@ -168,6 +177,9 @@ export function ClassroomQuizApp({
     updateScale();
     const ro = new ResizeObserver(scheduleUpdate);
     ro.observe(viewport);
+    if (shellContentEl && shellContentEl !== viewport) {
+      ro.observe(shellContentEl);
+    }
     window.addEventListener('resize', scheduleUpdate);
     window.addEventListener('orientationchange', scheduleUpdate);
     document.addEventListener('fullscreenchange', scheduleUpdate);
@@ -401,7 +413,8 @@ export function ClassroomQuizApp({
   const classroomBgmCorner = (
     <ClassroomQuizBgmCornerToggle className="pointer-events-auto absolute bottom-3 right-3 z-[500] sm:bottom-4 sm:right-4" />
   );
-  const fixedViewportStyle: CSSProperties | undefined = undefined;
+  const fixedViewportStyle: CSSProperties | undefined =
+    viewportHeightPx !== null ? { height: `${viewportHeightPx}px` } : undefined;
 
   if (blocks.length === 0 && !finished) {
     return (
