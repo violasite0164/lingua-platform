@@ -86,7 +86,6 @@ export function ClassroomQuizApp({
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [viewportHeightPx, setViewportHeightPx] = useState<number | null>(null);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const choiceMode = resolveChoiceMode(quiz);
@@ -163,7 +162,6 @@ export function ClassroomQuizApp({
       const next = h / CLASSROOM_QUIZ_CANVAS_BASE_HEIGHT;
       const clamped = Math.max(0.2, Math.min(next, 3));
       setCanvasScale((prev) => (Math.abs(prev - clamped) < 0.0001 ? prev : clamped));
-      setViewportHeightPx((prev) => (prev === h ? prev : h));
     };
 
     const scheduleUpdate = () => {
@@ -413,8 +411,7 @@ export function ClassroomQuizApp({
   const classroomBgmCorner = (
     <ClassroomQuizBgmCornerToggle className="pointer-events-auto absolute bottom-3 right-3 z-[500] sm:bottom-4 sm:right-4" />
   );
-  const fixedViewportStyle: CSSProperties | undefined =
-    viewportHeightPx !== null ? { height: `${viewportHeightPx}px` } : undefined;
+  const fixedViewportStyle: CSSProperties | undefined = undefined;
 
   if (blocks.length === 0 && !finished) {
     return (

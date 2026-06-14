@@ -100,7 +100,7 @@ export function GameShell({
       data-game-shell
       data-is-fullscreen={isFullscreen ? 'true' : 'false'}
       className={cn(
-        'relative isolate flex min-h-0 w-full flex-1 flex-col bg-background',
+        'relative isolate flex h-full min-h-0 w-full flex-1 flex-col bg-background',
       )}
     >
       <div className="sticky top-0 z-[200] flex shrink-0 items-center gap-2 border-b border-border/80 bg-muted/30 px-2 py-1.5 sm:px-3">
