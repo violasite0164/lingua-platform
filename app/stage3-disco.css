@@ -35,6 +35,21 @@
   background-repeat: no-repeat;
 }
 
+.stage3-fixed-viewport::before {
+  content: '';
+  position: absolute;
+  inset: -14%;
+  background-image: url('/games/stage3/disco-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(26px) saturate(1.05);
+  transform: scale(1.06);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .stage3-fixed-canvas {
   position: absolute;
   left: 50%;
@@ -44,6 +59,7 @@
   transform: translateX(-50%) scale(var(--stage3-canvas-scale, 1));
   transform-origin: center top;
   will-change: transform;
+  z-index: 1;
 }
 
 .stage3-root--fixed {

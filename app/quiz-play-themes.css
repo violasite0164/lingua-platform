@@ -59,6 +59,21 @@
   background-repeat: no-repeat;
 }
 
+.quiz-play-fixed-viewport::before {
+  content: '';
+  position: absolute;
+  inset: -14%;
+  background-image: url('/games/quiz-magic-woods-bg.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  filter: blur(26px) saturate(1.05);
+  transform: scale(1.06);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .quiz-play-fixed-canvas {
   position: absolute;
   left: 50%;
@@ -68,6 +83,7 @@
   transform: translateX(-50%) scale(var(--quiz-canvas-scale, 1));
   transform-origin: center top;
   will-change: transform;
+  z-index: 1;
 }
 
 .quiz-play-scene--fixed {
