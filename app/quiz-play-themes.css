@@ -628,6 +628,10 @@
   white-space: nowrap;
 }
 
+.quiz-play-mascot-bubble--inline {
+  z-index: 80;
+}
+
 .quiz-play-mascot-bubble--bear {
   max-width: min(200px, 50vw);
   white-space: normal;

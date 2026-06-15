@@ -1,7 +1,6 @@
 'use client';
 
 import { useLayoutEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import { QuizBearMascotRive } from '@/components/quiz/quiz-bear-mascot-rive';
 import { QuizBoyMascotRive } from '@/components/quiz/quiz-boy-mascot-rive';
@@ -18,27 +17,6 @@ type BubblePos = {
   left: number;
   top: number;
 };
-
-function measureBubble(
-  anchor: HTMLElement,
-  sceneRect: DOMRect,
-  side: 'bear' | 'boy' | 'girl',
-): BubblePos {
-  const r = anchor.getBoundingClientRect();
-  const centerX = r.left - sceneRect.left + r.width * 0.5;
-
-  if (side === 'bear') {
-    return {
-      left: r.left - sceneRect.left + r.width * 0.56,
-      top: r.top - sceneRect.top + r.height * 0.1,
-    };
-  }
-
-  return {
-    left: centerX,
-    top: r.top - sceneRect.top + r.height * 0.14,
-  };
-}
 
 export function QuizQuestionMascots({
   sceneRef,
@@ -59,9 +37,6 @@ export function QuizQuestionMascots({
   const [bearAnchor, setBearAnchor] = useState<HTMLElement | null>(null);
   const [boyAnchor, setBoyAnchor] = useState<HTMLElement | null>(null);
   const [girlAnchor, setGirlAnchor] = useState<HTMLElement | null>(null);
-  const [bearPos, setBearPos] = useState<BubblePos | null>(null);
-  const [boyPos, setBoyPos] = useState<BubblePos | null>(null);
-  const [girlPos, setGirlPos] = useState<BubblePos | null>(null);
 
   useLayoutEffect(() => {
     let cancelled = false;
@@ -98,10 +73,6 @@ export function QuizQuestionMascots({
           ? prev
           : nextLayout,
       );
-
-      setBearPos(bearAnchor && bearBubble ? measureBubble(bearAnchor, sceneRect, 'bear') : null);
-      setBoyPos(boyAnchor && boyBubble ? measureBubble(boyAnchor, sceneRect, 'boy') : null);
-      setGirlPos(girlAnchor && girlBubble ? measureBubble(girlAnchor, sceneRect, 'girl') : null);
 
     };
 
@@ -145,51 +116,24 @@ export function QuizQuestionMascots({
     girlBubble,
   ]);
 
-  const sceneEl = sceneRef.current;
-  const bubblesPortal =
-    sceneEl &&
-    (bearBubble || boyBubble || girlBubble) &&
-    createPortal(
-      <div className="quiz-play-mascot-bubbles-layer" aria-hidden>
-        {bearBubble && bearPos ? (
-          <div
-            className="quiz-play-mascot-bubble quiz-play-mascot-bubble--bear"
-            style={{ left: bearPos.left, top: bearPos.top }}
-          >
-            {bearBubble}
-          </div>
-        ) : null}
-        {boyBubble && boyPos ? (
-          <div
-            className="quiz-play-mascot-bubble quiz-play-mascot-bubble--boy"
-            style={{ left: boyPos.left, top: boyPos.top }}
-          >
-            {boyBubble}
-          </div>
-        ) : null}
-        {girlBubble && girlPos ? (
-          <div
-            className="quiz-play-mascot-bubble quiz-play-mascot-bubble--girl"
-            style={{ left: girlPos.left, top: girlPos.top }}
-          >
-            {girlBubble}
-          </div>
-        ) : null}
-      </div>,
-      sceneEl,
-    );
-
   if (!layout) return null;
 
   return (
     <>
-      {bubblesPortal}
       <div
         className="quiz-play-mascot-side quiz-play-mascot-side--left"
         style={{ left: layout.leftInset }}
         aria-hidden
       >
         <div className={cn('quiz-play-mascot', 'quiz-play-mascot--bear')}>
+          {bearBubble ? (
+            <div
+              className="quiz-play-mascot-bubble quiz-play-mascot-bubble--bear quiz-play-mascot-bubble--inline"
+              style={{ left: '56%', top: '14%' }}
+            >
+              {bearBubble}
+            </div>
+          ) : null}
           <QuizBearMascotRive ref={setBearAnchor} mood={characterMood} />
         </div>
       </div>
@@ -200,9 +144,25 @@ export function QuizQuestionMascots({
         aria-hidden
       >
         <div className={cn('quiz-play-mascot', 'quiz-play-mascot--boy')}>
+          {boyBubble ? (
+            <div
+              className="quiz-play-mascot-bubble quiz-play-mascot-bubble--boy quiz-play-mascot-bubble--inline"
+              style={{ left: '50%', top: '16%' }}
+            >
+              {boyBubble}
+            </div>
+          ) : null}
           <QuizBoyMascotRive ref={setBoyAnchor} mood={characterMood} />
         </div>
         <div className={cn('quiz-play-mascot', 'quiz-play-mascot--girl')}>
+          {girlBubble ? (
+            <div
+              className="quiz-play-mascot-bubble quiz-play-mascot-bubble--girl quiz-play-mascot-bubble--inline"
+              style={{ left: '50%', top: '16%' }}
+            >
+              {girlBubble}
+            </div>
+          ) : null}
           <QuizGirlMascotRive ref={setGirlAnchor} mood={characterMood} />
         </div>
       </div>
