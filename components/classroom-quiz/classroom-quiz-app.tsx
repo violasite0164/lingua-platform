@@ -86,7 +86,7 @@ export function ClassroomQuizApp({
 }) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [canvasScale, setCanvasScale] = useState(1);
-  const [debugEnabled] = useState(true);
+  const debugEnabled = isAdmin;
   const [scaleDebug, setScaleDebug] = useState<{
     viewportH: number;
     shellH: number;
@@ -159,13 +159,15 @@ export function ClassroomQuizApp({
       const h = shellH || viewportH;
 
       if (h <= 0) {
-        setScaleDebug({
-          viewportH,
-          shellH,
-          windowH: window.innerHeight,
-          scale: 0,
-          note: 'height=0',
-        });
+        if (debugEnabled) {
+          setScaleDebug({
+            viewportH,
+            shellH,
+            windowH: window.innerHeight,
+            scale: 0,
+            note: 'height=0',
+          });
+        }
         if (retryId !== null) window.clearTimeout(retryId);
         // Some layouts report 0 on the first frame; retry shortly.
         retryId = window.setTimeout(() => {
