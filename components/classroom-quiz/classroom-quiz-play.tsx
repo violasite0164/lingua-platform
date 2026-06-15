@@ -377,14 +377,15 @@ export function ClassroomQuizPlay({
   const hasVideo = hasQuestionVideo || showingOutcomeClip;
   const mountQuestionVideo =
     sessionRevealed &&
-    videoPlaybackAllowed &&
     Boolean(current.cf_video_uid) &&
     !showingOutcomeClip;
   const mountOutcomeVideo = sessionRevealed && showingOutcomeClip && Boolean(outcomeVideoUid);
   const mountStreamPlayer = mountQuestionVideo || mountOutcomeVideo;
+  const questionVideoActive =
+    mountQuestionVideo && playPhase === 'video' && videoPlaybackAllowed;
   const videoActive =
     sessionRevealed &&
-    ((mountQuestionVideo && playPhase === 'video') ||
+    (questionVideoActive ||
       (mountOutcomeVideo && playPhase === 'outcome_video'));
 
   const answersInteractive =
